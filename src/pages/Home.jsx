@@ -5,7 +5,7 @@ export default function Home() {
   const games = [
     { name: "Sudoku", path: "/game/sudoku", emoji: "🧩" },
     // مستقبلاً:
-    // { name: "Memory", path: "/game/memory", emoji: "🧠" },
+    { name: "NeuralGrid", path: "/game/neuralGrid", emoji: "🧠" },
     // { name: "Puzzle", path: "/game/puzzle", emoji: "🧩" },
   ];
 

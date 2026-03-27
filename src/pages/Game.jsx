@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import Sudoku from "../games/sudoku/Sudoku";
-
+import NeuralGrid from "../games/neuralGrid/NeuralGrid";
 export default function Game() {
   const { type } = useParams();
 
@@ -8,7 +8,7 @@ export default function Game() {
   const gamesMap = {
     sudoku: <Sudoku />,
     // مستقبلاً:
-    // memory: <MemoryGame />,
+    neuralGrid: <NeuralGrid />,
     // puzzle: <PuzzleGame />,
   };
 
