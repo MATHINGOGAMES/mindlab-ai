@@ -1,13 +1,78 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { generateGrid } from "./engine"; // تأكد من صحة المسار
+import { generateGrid } from "./engine";
 import { useGameStore } from "../../core/store";
 import { playSound } from "../../core/sounds";
 
+/**
+ * =========================================================
+ * 🧠 NEURAL GRID - OFFICIAL GAME DESCRIPTION
+ * =========================================================
+ *
+ * Neural Grid is a fast-paced brain-training puzzle game
+ * that challenges players to detect hidden mathematical patterns.
+ *
+ * Each level presents a dynamic 3x3 grid generated from
+ * arithmetic, geometric, or mixed sequences.
+ * One number is hidden and replaced with a "?".
+ *
+ * 🎯 Your mission:
+ * Analyze the pattern and find the missing number before time runs out.
+ *
+ * ---------------------------------------------------------
+ * ⚡ CORE FEATURES
+ * ---------------------------------------------------------
+ * - Procedurally generated levels (infinite gameplay)
+ * - Increasing difficulty based on player level
+ * - Combo system for skilled players
+ * - Time pressure mechanic for excitement
+ * - Special ability: Time Freeze every 5 combos
+ * - Instant visual + sound feedback
+ *
+ * ---------------------------------------------------------
+ * 🚀 ADDICTIVE GAME LOOP (HOOK)
+ * ---------------------------------------------------------
+ * Solve → Earn Combo → Freeze Time → Score More → Level Up → Repeat
+ *
+ * The faster and more accurate you are,
+ * the higher your combo and score will climb.
+ *
+ * ---------------------------------------------------------
+ * 🧩 HOW TO PLAY
+ * ---------------------------------------------------------
+ * 1. Observe the number grid carefully
+ * 2. Detect the hidden pattern
+ * 3. Calculate the missing number
+ * 4. Enter your answer before time ends
+ *
+ * ✔ Correct Answer:
+ * - Gain points
+ * - Increase combo
+ * - Possible time freeze bonus
+ *
+ * ❌ Wrong Answer / Timeout:
+ * - Combo resets
+ * - Move to next challenge
+ *
+ * ---------------------------------------------------------
+ * 🧠 SKILLS DEVELOPED
+ * ---------------------------------------------------------
+ * - Pattern Recognition
+ * - Logical Thinking
+ * - Mental Math
+ * - Focus Under Pressure
+ *
+ * ---------------------------------------------------------
+ * 🎮 PERFECT FOR:
+ * Students, puzzle lovers, and brain training enthusiasts.
+ *
+ * Simple to learn. Hard to master. Highly addictive.
+ * =========================================================
+ */
+
 export default function NeuralGrid() {
-  // --- State الموحد لمنع تعارض البيانات ---
   const [gameState, setGameState] = useState({
     level: 1,
     data: generateGrid(1),
@@ -16,14 +81,13 @@ export default function NeuralGrid() {
     score: 0,
     combo: 0,
     feedback: "",
-    status: "playing", // 'playing', 'checking'
+    status: "playing",
     isFrozen: false,
   });
 
   const addXP = useGameStore((s) => s.addXP);
   const inputRef = useRef(null);
 
-  // --- دالة الانتقال للمستوى التالي ---
   const nextLevel = useCallback(() => {
     setGameState((prev) => {
       const nextLvl = prev.level + 1;
@@ -40,14 +104,13 @@ export default function NeuralGrid() {
     });
   }, []);
 
-  // --- التعامل مع الإجابة الخاطئة ---
   const handleFail = useCallback(() => {
     if (gameState.status === "checking") return;
 
     playSound("wrong");
     setGameState((prev) => ({
       ...prev,
-      feedback: "❌ Wrong!",
+      feedback: "❌ WRONG!",
       combo: 0,
       status: "checking",
     }));
@@ -55,7 +118,6 @@ export default function NeuralGrid() {
     setTimeout(nextLevel, 800);
   }, [nextLevel, gameState.status]);
 
-  // --- التعامل مع الإجابة الصحيحة ---
   const handleSuccess = useCallback(() => {
     playSound("correct");
 
@@ -72,7 +134,7 @@ export default function NeuralGrid() {
         combo: newCombo,
         score: prev.score + gained,
         isFrozen: isNowFrozen,
-        feedback: isNowFrozen ? "❄️ TIME FROZEN!" : "✅ Correct!",
+        feedback: isNowFrozen ? "❄️ TIME FROZEN!" : "✅ CORRECT!",
         status: "checking",
       };
     });
@@ -80,7 +142,6 @@ export default function NeuralGrid() {
     setTimeout(nextLevel, 600);
   }, [addXP, nextLevel]);
 
-  // --- التحقق من الإجابة ---
   const checkAnswer = () => {
     if (gameState.status !== "playing" || !gameState.input) return;
 
@@ -91,7 +152,6 @@ export default function NeuralGrid() {
     }
   };
 
-  // --- المؤقت (Timer) ---
   useEffect(() => {
     if (gameState.isFrozen || gameState.status !== "playing") return;
 
@@ -109,15 +169,15 @@ export default function NeuralGrid() {
     return () => clearInterval(timer);
   }, [gameState.level, gameState.isFrozen, gameState.status, handleFail]);
 
-  // تركيز تلقائي على الإدخال
   useEffect(() => {
     inputRef.current?.focus();
   }, [gameState.level]);
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-sans overflow-hidden p-6">
-      {/* المعلومات العلوية */}
-      <div className="flex gap-10 mb-8 bg-white/5 border border-white/10 p-5 rounded-3xl backdrop-blur-xl">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-sans overflow-hidden p-6 relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-900 via-black to-black opacity-60"></div>
+
+      <div className="flex gap-10 mb-10 relative z-10 bg-black/40 border border-white/5 p-5 rounded-3xl backdrop-blur-xl shadow-inner">
         <StatItem
           label="Level"
           value={gameState.level}
@@ -135,12 +195,11 @@ export default function NeuralGrid() {
         />
       </div>
 
-      <h1 className="text-5xl font-black mb-10 tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
+      <h1 className="text-6xl font-black mb-12 relative z-10 tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
         NEURAL GRID
       </h1>
 
-      {/* شريط الوقت */}
-      <div className="w-64 h-2 bg-gray-800 rounded-full mb-10 overflow-hidden shadow-inner">
+      <div className="w-80 h-3 bg-gray-800 rounded-full mb-12 relative z-10 overflow-hidden">
         <motion.div
           initial={{ width: "100%" }}
           animate={{
@@ -152,40 +211,22 @@ export default function NeuralGrid() {
               : "#a855f7",
           }}
           transition={{ duration: 0.3 }}
-          className="h-full"
+          className="h-full rounded-full"
         />
       </div>
 
-      {/* عرض الشبكة - مع حماية ضد الـ Undefined */}
       <AnimatePresence mode="wait">
         <motion.div
           key={gameState.level}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 1.05 }}
-          className="grid grid-cols-3 gap-4 bg-gray-900/40 p-6 rounded-[2rem] border border-white/5 shadow-2xl"
+          className="grid grid-cols-3 gap-6 relative z-10 bg-gray-900/40 p-8 rounded-[2.5rem]"
         >
-          {gameState.data?.displayGrid?.map((row, i) =>
-            row.map((cell, j) => (
-              <motion.div
-                key={`${i}-${j}`}
-                whileHover={{ scale: 1.05 }}
-                className={`w-20 h-20 flex items-center justify-center rounded-2xl text-2xl font-bold transition-colors
-                  ${
-                    cell === "?"
-                      ? "bg-purple-600 shadow-[0_0_25px_rgba(147,51,234,0.4)] animate-pulse"
-                      : "bg-white/5 border border-white/10 text-gray-400"
-                  }`}
-              >
-                {cell}
-              </motion.div>
-            ))
+          {gameState.data.displayGrid.map((row, i) =>
+            row.map((cell, j) => <GridCell key={`${i}-${j}`} cell={cell} />)
           )}
         </motion.div>
       </AnimatePresence>
 
-      {/* منطقة الإدخال */}
-      <div className="mt-12 flex flex-col items-center gap-6">
+      <div className="mt-16 relative z-10 flex flex-col items-center gap-8">
         <input
           ref={inputRef}
           value={gameState.input}
@@ -196,33 +237,21 @@ export default function NeuralGrid() {
             }))
           }
           onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
-          className="bg-transparent border-b-2 border-purple-500 text-5xl text-center w-32 focus:outline-none focus:border-pink-500 transition-all font-mono"
+          className="bg-black border-4 border-purple-500 text-5xl text-center w-48 h-24 rounded-2xl"
           placeholder="?"
-          disabled={gameState.status !== "playing"}
         />
 
         <button
           onClick={checkAnswer}
-          className="px-10 py-3 bg-white text-black font-bold rounded-xl hover:bg-purple-500 hover:text-white transition-all transform active:scale-95"
+          className="px-10 py-3 bg-white text-black rounded-xl"
         >
-          SUBMIT
+          Submit
         </button>
       </div>
 
-      {/* التغذية الراجعة */}
       <AnimatePresence>
         {gameState.feedback && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className={`mt-8 text-2xl font-black ${
-              gameState.feedback.includes("✅") ||
-              gameState.feedback.includes("❄️")
-                ? "text-green-400"
-                : "text-red-400"
-            }`}
-          >
+          <motion.div className="fixed bottom-10 text-2xl font-bold">
             {gameState.feedback}
           </motion.div>
         )}
@@ -231,14 +260,19 @@ export default function NeuralGrid() {
   );
 }
 
-// مكون فرعي للإحصائيات
+function GridCell({ cell }) {
+  return (
+    <div className="w-24 h-24 flex items-center justify-center bg-gray-800 rounded-xl text-3xl">
+      {cell}
+    </div>
+  );
+}
+
 function StatItem({ label, value, color }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-[10px] uppercase opacity-50 font-bold tracking-tighter">
-        {label}
-      </span>
-      <span className={`text-xl font-black ${color}`}>{value}</span>
+      <span className="text-xs">{label}</span>
+      <span className={`text-2xl ${color}`}>{value}</span>
     </div>
   );
 }
