@@ -1,115 +1,91 @@
+import { useState, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { motion } from "framer-motion"; // استيراد Framer Motion
+import { motion, AnimatePresence } from "framer-motion";
 import Home from "./pages/Home";
 import Game from "./pages/Game";
 
 function App() {
-  // 🛰️ كاشف المسار التلقائي: (لا يتغير)
   const base = window.location.hostname.includes("github.io")
     ? "/mindlab-ai"
     : "/";
 
+  // 🎵 إدارة الصوت
+  const [isPlaying, setIsPlaying] = useState(false);
+  // تأكد من مطابقة اسم الملف هنا مع ما وضعته في مجلد public
+  const audioRef = useRef(new Audio(`${base}rain-suite-11.mp3`));
+  audioRef.current.loop = true;
+
+  const toggleMusic = () => {
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current
+        .play()
+        .catch((err) => console.log("Audio play blocked by browser"));
+    }
+    setIsPlaying(!isPlaying);
+  };
+
   return (
     <Router basename={base}>
+      {/* 🎧 زر التحكم في الموسيقى (يظهر في جميع الصفحات) */}
+      <div className="fixed top-6 right-6 z-[100]">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={toggleMusic}
+          className={`group flex items-center gap-3 px-4 py-2 rounded-full border transition-all duration-500 ${
+            isPlaying
+              ? "border-cyan-400 bg-cyan-400/10 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
+              : "border-white/20 bg-black/40 opacity-60 hover:opacity-100"
+          }`}
+        >
+          {/* نص توضيحي يظهر عند الحوّم بالماوس */}
+          <span className="text-[10px] font-black uppercase tracking-tighter text-cyan-500 hidden group-hover:block">
+            {isPlaying ? "Mute Ambient" : "Activate Sound"}
+          </span>
+
+          {/* أيقونة الأمواج الصوتية المتحركة */}
+          <div className="flex gap-1 items-end h-3">
+            {[1, 2, 3].map((i) => (
+              <motion.div
+                key={i}
+                animate={
+                  isPlaying ? { height: [2, 12, 6, 12, 2] } : { height: 2 }
+                }
+                transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
+                className={`w-1 rounded-full ${
+                  isPlaying ? "bg-cyan-400" : "bg-gray-500"
+                }`}
+              />
+            ))}
+          </div>
+        </motion.button>
+      </div>
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/game/:type" element={<Game />} />
 
-        {/* 🌌 صفحة 404: "الثقب الأسود النجمي" */}
+        {/* صفحة 404 (كود الثقب الأسود) */}
         <Route
           path="*"
           element={
-            <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-mono relative overflow-hidden">
-              {/* 1. الثقب الأسود المتحرك (الخلفية البصرية) */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-30 z-0">
-                {/* الحلقة الخارجية المضيئة */}
-                <motion.div
-                  animate={{
-                    rotate: 360,
-                    scale: [1, 1.1, 1],
-                  }}
-                  transition={{
-                    duration: 15,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="absolute w-[500px] h-[500px] border-4 border-dashed border-cyan-800 rounded-full blur-sm"
-                />
-
-                {/* حلقة الجاذبية الداخلية (أسرع) */}
-                <motion.div
-                  animate={{
-                    rotate: -360,
-                    scale: [1, 1.2, 1],
-                  }}
-                  transition={{
-                    duration: 8,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="absolute w-[350px] h-[350px] border-8 border-double border-cyan-500 rounded-full shadow-[0_0_60px_#14b8a6]"
-                />
-
-                {/* "أفق الحدث" الأسود المطلق في المركز */}
-                <div className="absolute w-[200px] h-[200px] bg-black rounded-full shadow-[0_0_100px_#000] z-10" />
-              </div>
-
-              {/* 2. المحتوى الأمامي (Text & Button) */}
-              <motion.div
-                className="text-center z-10 flex flex-col items-center"
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, delay: 0.2 }}
+            <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center relative overflow-hidden">
+              <h1 className="text-9xl font-black text-cyan-500 animate-pulse z-10">
+                404
+              </h1>
+              <p className="z-10 opacity-50 uppercase tracking-[0.5em] text-xs mt-4">
+                Signal Lost in Deep Space
+              </p>
+              <button
+                onClick={() => (window.location.href = base)}
+                className="z-10 mt-10 px-6 py-2 border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black transition-all"
               >
-                {/* رقم 404 المسحوب نحو المركز */}
-                <motion.h1
-                  animate={{
-                    letterSpacing: ["0px", "20px", "0px"],
-                    y: [0, 5, -5, 0],
-                  }}
-                  transition={{
-                    duration: 6,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="text-9xl font-black text-cyan-300 mb-2 relative"
-                >
-                  4<span className="text-cyan-600 animate-pulse">0</span>4
-                </motion.h1>
-
-                <p className="tracking-widest opacity-70 uppercase text-xs mb-10">
-                  Critical Error: Gravitational Singularity
-                </p>
-
-                {/* زر "العودة للقاعدة" (Warp Button) */}
-                <motion.button
-                  whileHover={{
-                    scale: 1.1,
-                    boxShadow: "0px 0px 30px #14b8a6",
-                    textShadow: "0px 0px 10px #fff",
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => (window.location.href = base)}
-                  className="px-10 py-4 border-2 border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black transition-all duration-300 uppercase tracking-tighter font-bold flex items-center gap-2 group"
-                >
-                  <motion.span
-                    animate={{ x: [-2, 2, -2] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="text-xl"
-                  >
-                    🚀
-                  </motion.span>
-                  Return to Base Station
-                  <motion.span
-                    initial={{ x: -10, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 1 }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    (Warp Drive Initialized)
-                  </motion.span>
-                </motion.button>
-              </motion.div>
+                RETURN TO BASE
+              </button>
+              {/* تأثير الثقب الأسود البسيط خلف النص */}
+              <div className="absolute w-[400px] h-[400px] bg-cyan-900/10 rounded-full blur-[100px]" />
             </div>
           }
         />

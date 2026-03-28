@@ -21,7 +21,16 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* 🎵 جزء الحقوق (وضعته هنا ليكون داخل الحاوية الرئيسية) */}
+      <div className="fixed bottom-2 left-4 z-50 pointer-events-none">
+        <p className="text-[10px] text-cyan-500/40 font-mono tracking-widest uppercase leading-tight">
+          Ambient Sound: "Rain Suite Part 11" by Chad Crouch
+          <br />
+          Source: Free Music Archive | License: CC BY-NC
+        </p>
+      </div>
+
       {/* العنوان الرئيسي */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -47,7 +56,6 @@ export default function Home() {
           >
             <Link to={game.path} className="group block">
               <div className="relative overflow-hidden bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] transition-all hover:border-white/30 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]">
-                {/* تأثير خلفية الكارت */}
                 <div
                   className={`absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br ${game.color} opacity-10 blur-2xl group-hover:opacity-30 transition-opacity`}
                 />
@@ -64,7 +72,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* زر التشغيل الصغير */}
                 <div className="mt-6 flex justify-end">
                   <span className="text-xs font-black uppercase tracking-widest text-white/20 group-hover:text-white transition-colors">
                     Start Game →
@@ -78,7 +85,7 @@ export default function Home() {
 
       {/* التذييل */}
       <footer className="mt-20 text-gray-600 text-xs font-mono">
-        © 2024 MINDLAB AI TERMINAL v2.0
+        © 2026 MINDLAB AI TERMINAL v2.0
       </footer>
     </div>
   );
