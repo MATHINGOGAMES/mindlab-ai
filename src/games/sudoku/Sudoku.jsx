@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { generateSudoku } from "./sudokuEngine";
 import { useGameStore } from "../../core/store";
+// 1. استيراد نظام الأصوات
+import { playSound } from "../../core/sounds";
 
 export default function Sudoku() {
   const [difficulty, setDifficulty] = useState("medium");
@@ -12,10 +14,8 @@ export default function Sudoku() {
   };
 
   const [{ puzzle, solution }, setGame] = useState(() => createGame("medium"));
-
   const [grid, setGrid] = useState(puzzle);
   const [initialGrid, setInitialGrid] = useState(puzzle);
-
   const [time, setTime] = useState(0);
   const [lives, setLives] = useState(3);
   const [shake, setShake] = useState(false);
@@ -23,23 +23,26 @@ export default function Sudoku() {
 
   const addXP = useGameStore((s) => s.addXP);
 
-  // 🔊 Sounds
-  const playSound = (type) => {
-    const sounds = {
-      correct: new Audio("/sounds/correct.mp3"),
-      wrong: new Audio("/sounds/wrong.mp3"),
-      win: new Audio("/sounds/win.mp3"),
-    };
-    sounds[type]?.play();
-  };
-
   // ⏱ Timer
   useEffect(() => {
     const interval = setInterval(() => {
-      setTime((t) => t + 1);
+      if (!win) setTime((t) => t + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [win]);
+
+  // 2. التحقق من الفوز وتشغيل صوت الفوز
+  useEffect(() => {
+    const isComplete = grid.every((row, i) =>
+      row.every((cell, j) => cell !== "" && Number(cell) === solution[i][j])
+    );
+
+    if (isComplete && !win && grid[0][0] !== "") {
+      setWin(true);
+      playSound("win"); // صوت الفوز
+      addXP(100);
+    }
+  }, [grid, solution, win, addXP]);
 
   const formatTime = () => {
     const min = Math.floor(time / 60);
@@ -47,7 +50,6 @@ export default function Sudoku() {
     return `${min}:${sec < 10 ? "0" : ""}${sec}`;
   };
 
-  // 🎯 New Game
   const handleNewGame = (diff = difficulty) => {
     const newGame = createGame(diff);
     setGame(newGame);
@@ -59,7 +61,6 @@ export default function Sudoku() {
     setWin(false);
   };
 
-  // ✏️ Input
   const handleChange = (row, col, value) => {
     if (initialGrid[row][col] !== "") return;
     if (!/^[1-9]?$/.test(value)) return;
@@ -67,144 +68,123 @@ export default function Sudoku() {
     const newGrid = grid.map((r) => [...r]);
     newGrid[row][col] = value === "" ? "" : Number(value);
 
-    if (value !== "" && Number(value) !== solution[row][col]) {
-      setLives((l) => l - 1);
-      setShake(true);
-      playSound("wrong");
-      setTimeout(() => setShake(false), 300);
-    } else if (value !== "") {
-      playSound("correct");
+    // 3. تشغيل الأصوات عند الإدخال
+    if (value !== "") {
+      if (Number(value) !== solution[row][col]) {
+        // إجابة خاطئة
+        setLives((l) => l - 1);
+        setShake(true);
+        playSound("wrong"); // صوت الخطأ
+        setTimeout(() => setShake(false), 300);
+      } else {
+        // إجابة صحيحة
+        playSound("correct"); // صوت الإجابة الصحيحة
+      }
     }
 
     setGrid(newGrid);
   };
 
-  // 💡 Hint
-  const handleHint = () => {
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        if (grid[i][j] === "") {
-          const newGrid = grid.map((r) => [...r]);
-          newGrid[i][j] = solution[i][j];
-          setGrid(newGrid);
-          playSound("correct");
-          return;
-        }
-      }
-    }
-  };
-
-  // ❌ check
-  const isWrong = (i, j) => {
-    return grid[i][j] !== "" && Number(grid[i][j]) !== solution[i][j];
-  };
-
-  // 🧠 win
-  const checkWin = () => {
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        if (Number(grid[i][j]) !== solution[i][j]) return false;
-      }
-    }
-    return true;
-  };
-
-  const handleWin = () => {
-    if (checkWin()) {
-      addXP(120);
-      setWin(true);
-      playSound("win");
-    } else {
-      setShake(true);
-      setTimeout(() => setShake(false), 300);
-    }
-  };
-
-  // 💀 Game Over
-  useEffect(() => {
-    if (lives <= 0) {
-      alert("💀 Game Over!");
-      handleNewGame();
-    }
-  }, [lives]);
-
   return (
-    <div style={{ padding: 20, textAlign: "center" }}>
-      <h2>🧩 Sudoku</h2>
+    <div className="flex flex-col items-center justify-center p-6 text-white bg-black min-h-screen">
+      <h2 className="text-4xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">
+        🧩 SUDOKU MASTER
+      </h2>
 
-      <div style={{ marginBottom: 10 }}>
-        ⏱ {formatTime()} | ❤️ {lives}
+      {/* Stats Area */}
+      <div className="flex gap-8 mb-6 bg-gray-900/50 p-4 rounded-2xl border border-white/10 shadow-xl">
+        <div className="flex flex-col items-center">
+          <span className="text-xs uppercase opacity-50">Time</span>
+          <span className="text-2xl font-mono text-blue-400">
+            {formatTime()}
+          </span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-xs uppercase opacity-50">Lives</span>
+          <span className="text-2xl font-mono text-red-500">
+            {"❤️ ".repeat(Math.max(0, lives))}
+          </span>
+        </div>
       </div>
 
-      {/* 🎉 Win Animation */}
-      {win && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          style={{
-            background: "#0f0",
-            padding: 10,
-            marginBottom: 10,
-            borderRadius: 10,
-          }}
-        >
-          🎉 You Win!
-        </motion.div>
-      )}
-
-      {/* 🎯 Difficulty */}
-      <div style={{ marginBottom: 10 }}>
-        <button onClick={() => handleNewGame("easy")}>Easy</button>
-        <button onClick={() => handleNewGame("medium")}>Medium</button>
-        <button onClick={() => handleNewGame("hard")}>Hard</button>
+      {/* Difficulty Selector */}
+      <div className="flex gap-2 mb-8">
+        {["easy", "medium", "hard"].map((diff) => (
+          <button
+            key={diff}
+            onClick={() => handleNewGame(diff)}
+            className={`px-4 py-2 rounded-xl uppercase text-xs font-bold transition-all ${
+              difficulty === diff
+                ? "bg-green-600 text-white scale-110 shadow-lg shadow-green-900/50"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+            }`}
+          >
+            {diff}
+          </button>
+        ))}
       </div>
 
-      {/* 🧩 Grid */}
+      {/* The Grid */}
       <motion.div
         animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(9, 45px)",
-          justifyContent: "center",
-        }}
+        className="grid grid-cols-9 gap-0 bg-gray-300 p-1 rounded-lg shadow-2xl overflow-hidden border-4 border-gray-900"
       >
         {grid.map((row, i) =>
           row.map((cell, j) => {
-            const fixed = initialGrid[i][j] !== "";
-            const wrong = isWrong(i, j);
+            const isInitial = initialGrid[i][j] !== "";
+            const isWrong = cell !== "" && Number(cell) !== solution[i][j];
 
             return (
-              <motion.input
-                whileTap={{ scale: 0.9 }}
-                key={i + "-" + j}
+              <input
+                key={`${i}-${j}`}
                 value={cell}
-                disabled={fixed}
+                disabled={isInitial || win}
                 onChange={(e) => handleChange(i, j, e.target.value)}
-                style={{
-                  width: 45,
-                  height: 45,
-                  textAlign: "center",
-                  fontSize: 18,
-                  fontWeight: fixed ? "bold" : "normal",
-                  background: fixed ? "#eee" : wrong ? "#ffcccc" : "#fff",
-                  borderRight:
-                    (j + 1) % 3 === 0 ? "3px solid black" : "1px solid #999",
-                  borderBottom:
-                    (i + 1) % 3 === 0 ? "3px solid black" : "1px solid #999",
-                  borderTop: i === 0 ? "3px solid black" : "",
-                  borderLeft: j === 0 ? "3px solid black" : "",
-                }}
+                maxLength="1"
+                className={`
+                  w-10 h-10 sm:w-12 sm:h-12 text-center text-xl font-bold outline-none transition-all
+                  /* حدود المربعات الكبرى */
+                  ${
+                    (j + 1) % 3 === 0 && j < 8
+                      ? "border-r-2 border-gray-900"
+                      : "border-r border-gray-400"
+                  }
+                  ${
+                    (i + 1) % 3 === 0 && i < 8
+                      ? "border-b-2 border-gray-900"
+                      : "border-b border-gray-400"
+                  }
+                  /* الألوان */
+                  ${
+                    isInitial
+                      ? "bg-gray-200 text-gray-900"
+                      : "bg-white text-blue-600 focus:bg-blue-50"
+                  }
+                  ${isWrong ? "bg-red-100 text-red-600 focus:bg-red-200" : ""}
+                `}
               />
             );
           })
         )}
       </motion.div>
 
-      {/* 🎮 Controls */}
-      <div style={{ marginTop: 20 }}>
-        <button onClick={handleHint}>💡 Hint</button>
-        <button onClick={handleWin}>Check</button>
-        <button onClick={() => handleNewGame()}>🔄 New Game</button>
+      {/* Game Controls */}
+      <div className="mt-10 flex gap-4">
+        <button
+          onClick={() => handleNewGame()}
+          className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors shadow-lg"
+        >
+          🔄 RESET
+        </button>
+        {win && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="text-green-400 font-bold text-xl"
+          >
+            🏆 Perfect!
+          </motion.div>
+        )}
       </div>
     </div>
   );

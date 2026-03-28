@@ -1,32 +1,34 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Game from "./pages/Game";
-import Navbar from "./components/Navbar";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard"; // الصفحة الرئيسية التي بها الكروت
+import Game from "./pages/Game"; // الملف الذي عدلناه تواً
+import Profile from "./pages/Profile";
 
-// Optional: صفحة 404
-function NotFound() {
+function App() {
   return (
-    <div style={{ padding: 20, textAlign: "center" }}>
-      <h2>❌ Page not found</h2>
-      <p>الصفحة التي تبحث عنها غير موجودة</p>
-    </div>
-  );
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      {/* Navbar ثابت أعلى كل الصفحات */}
-      <Navbar />
-
-      {/* Main Routes */}
+    <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* الصفحة الرئيسية */}
+        <Route path="/" element={<Dashboard />} />
+
+        {/* مسار الألعاب الديناميكي */}
+        {/* كلمة :type هنا هي التي يستقبلها ملف Game.jsx */}
         <Route path="/game/:type" element={<Game />} />
 
-        {/* Catch-all route */}
-        <Route path="*" element={<NotFound />} />
+        {/* صفحة البروفايل (إذا كانت موجودة) */}
+        <Route path="/profile" element={<Profile />} />
+
+        {/* مسار احتياطي في حال كتابة رابط خطأ */}
+        <Route
+          path="*"
+          element={
+            <div className="text-white text-center mt-20">
+              404 - Page Not Found
+            </div>
+          }
+        />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;
