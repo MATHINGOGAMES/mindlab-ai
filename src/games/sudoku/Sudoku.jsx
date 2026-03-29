@@ -1,191 +1,213 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { generateSudoku } from "./sudokuEngine";
-import { useGameStore } from "../../core/store";
-// 1. استيراد نظام الأصوات
+import { Helmet } from "react-helmet-async";
+import ResultModal from "../../components/shared/ResultModal";
 import { playSound } from "../../core/sounds";
+import { useGameStore } from "../../core/store";
+
+import { generateSudoku, generateDailySudoku } from "./sudokuEngine";
+
+// ========================
+// 🧠 Description
+// ========================
+
+const SUDOKU_DESCRIPTION = `
+🧩 Sudoku Master – Description
+
+Sudoku Master is a classic logic puzzle game enhanced with modern AI features, designed to challenge your brain and improve your logical thinking skills. Players must fill a 9×9 grid so that each row, column, and 3×3 section contains numbers from 1 to 9 without repetition.
+
+As difficulty increases, puzzles become more complex, requiring deeper concentration, strategic thinking, and advanced problem-solving abilities. With AI-generated puzzles and daily challenges, every game offers a fresh and engaging experience.
+
+🎯 Why It Matters (Benefits)
+
+Playing Sudoku regularly can significantly improve:
+
+Focus & Concentration  
+Enhances your ability to stay focused for extended periods.
+
+Logical Thinking  
+Develops structured reasoning and decision-making skills.
+
+Memory Retention  
+Strengthens short-term memory through number tracking.
+
+Problem-Solving Skills  
+Encourages analytical thinking and pattern recognition.
+
+Mental Agility  
+Keeps your brain sharp, active, and adaptive.
+
+🚀 The Experience
+
+With AI-generated levels, adaptive difficulty, and daily puzzles, Sudoku Master delivers a modern brain-training experience. Whether you're a beginner or an expert, this game offers endless challenges to sharpen your mind and boost your cognitive performance.
+`;
+
+// ========================
+// 🎮 Component
+// ========================
 
 export default function Sudoku() {
   const [difficulty, setDifficulty] = useState("medium");
+  const [{ puzzle, solution }, setGame] = useState(() =>
+    generateSudoku("medium")
+  );
 
-  const createGame = (diff) => {
-    const { puzzle, solution } = generateSudoku(diff);
-    return { puzzle, solution };
-  };
-
-  const [{ puzzle, solution }, setGame] = useState(() => createGame("medium"));
   const [grid, setGrid] = useState(puzzle);
   const [initialGrid, setInitialGrid] = useState(puzzle);
   const [time, setTime] = useState(0);
   const [lives, setLives] = useState(3);
-  const [shake, setShake] = useState(false);
   const [win, setWin] = useState(false);
+  const [shake, setShake] = useState(false);
+  const [score, setScore] = useState(0);
+  const [modal, setModal] = useState(false);
 
   const addXP = useGameStore((s) => s.addXP);
 
   // ⏱ Timer
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!win) setTime((t) => t + 1);
+    const timer = setInterval(() => {
+      if (!win && lives > 0) setTime((t) => t + 1);
     }, 1000);
-    return () => clearInterval(interval);
-  }, [win]);
+    return () => clearInterval(timer);
+  }, [win, lives]);
 
-  // 2. التحقق من الفوز وتشغيل صوت الفوز
+  // ✅ Win check
   useEffect(() => {
-    const isComplete = grid.every((row, i) =>
+    const done = grid.every((row, i) =>
       row.every((cell, j) => cell !== "" && Number(cell) === solution[i][j])
     );
 
-    if (isComplete && !win && grid[0][0] !== "") {
+    if (done && !win) {
       setWin(true);
-      playSound("win"); // صوت الفوز
+      playSound("win");
+
+      const finalScore = Math.max(0, 1000 - time * 2 + lives * 50);
+      setScore(finalScore);
       addXP(100);
+      setModal(true);
     }
-  }, [grid, solution, win, addXP]);
+  }, [grid]);
 
-  const formatTime = () => {
-    const min = Math.floor(time / 60);
-    const sec = time % 60;
-    return `${min}:${sec < 10 ? "0" : ""}${sec}`;
-  };
-
-  const handleNewGame = (diff = difficulty) => {
-    const newGame = createGame(diff);
-    setGame(newGame);
-    setGrid(newGame.puzzle);
-    setInitialGrid(newGame.puzzle);
+  const newGame = (diff = difficulty) => {
+    const game = generateSudoku(diff);
+    setGame(game);
+    setGrid(game.puzzle);
+    setInitialGrid(game.puzzle);
     setDifficulty(diff);
     setTime(0);
     setLives(3);
     setWin(false);
+    setModal(false);
   };
 
-  const handleChange = (row, col, value) => {
-    if (initialGrid[row][col] !== "") return;
-    if (!/^[1-9]?$/.test(value)) return;
+  const dailyGame = () => {
+    const game = generateDailySudoku(difficulty);
+    setGame(game);
+    setGrid(game.puzzle);
+    setInitialGrid(game.puzzle);
+    setTime(0);
+    setLives(3);
+    setWin(false);
+    setModal(false);
+  };
 
-    const newGrid = grid.map((r) => [...r]);
-    newGrid[row][col] = value === "" ? "" : Number(value);
+  const handleInput = (r, c, val) => {
+    if (initialGrid[r][c] !== "" || win) return;
+    if (!/^[1-9]?$/.test(val)) return;
 
-    // 3. تشغيل الأصوات عند الإدخال
-    if (value !== "") {
-      if (Number(value) !== solution[row][col]) {
-        // إجابة خاطئة
-        setLives((l) => l - 1);
-        setShake(true);
-        playSound("wrong"); // صوت الخطأ
-        setTimeout(() => setShake(false), 300);
-      } else {
-        // إجابة صحيحة
-        playSound("correct"); // صوت الإجابة الصحيحة
-      }
+    const newGrid = grid.map((row) => [...row]);
+    newGrid[r][c] = val === "" ? "" : Number(val);
+
+    if (val !== "" && Number(val) !== solution[r][c]) {
+      setLives((l) => l - 1);
+      setShake(true);
+      playSound("wrong");
+      setTimeout(() => setShake(false), 300);
     }
 
     setGrid(newGrid);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 text-white bg-black min-h-screen">
-      <h2 className="text-4xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">
-        🧩 SUDOKU MASTER
-      </h2>
+    <>
+      <Helmet>
+        <title>Sudoku Master | AI Brain Game</title>
+        <meta name="description" content={SUDOKU_DESCRIPTION} />
+      </Helmet>
 
-      {/* Stats Area */}
-      <div className="flex gap-8 mb-6 bg-gray-900/50 p-4 rounded-2xl border border-white/10 shadow-xl">
-        <div className="flex flex-col items-center">
-          <span className="text-xs uppercase opacity-50">Time</span>
-          <span className="text-2xl font-mono text-blue-400">
-            {formatTime()}
-          </span>
+      <div className="p-6 text-white bg-black min-h-screen flex flex-col items-center">
+        <h1 className="text-4xl font-black mb-6">🧩 Sudoku Master</h1>
+
+        {/* Buttons */}
+        <div className="flex gap-2 mb-6">
+          {["easy", "medium", "hard"].map((d) => (
+            <button key={d} onClick={() => newGame(d)}>
+              {d}
+            </button>
+          ))}
+          <button onClick={dailyGame}>🌞 Daily</button>
         </div>
-        <div className="flex flex-col items-center">
-          <span className="text-xs uppercase opacity-50">Lives</span>
-          <span className="text-2xl font-mono text-red-500">
-            {"❤️ ".repeat(Math.max(0, lives))}
-          </span>
-        </div>
-      </div>
 
-      {/* Difficulty Selector */}
-      <div className="flex gap-2 mb-8">
-        {["easy", "medium", "hard"].map((diff) => (
-          <button
-            key={diff}
-            onClick={() => handleNewGame(diff)}
-            className={`px-4 py-2 rounded-xl uppercase text-xs font-bold transition-all ${
-              difficulty === diff
-                ? "bg-green-600 text-white scale-110 shadow-lg shadow-green-900/50"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-            }`}
-          >
-            {diff}
-          </button>
-        ))}
-      </div>
-
-      {/* The Grid */}
-      <motion.div
-        animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
-        className="grid grid-cols-9 gap-0 bg-gray-300 p-1 rounded-lg shadow-2xl overflow-hidden border-4 border-gray-900"
-      >
-        {grid.map((row, i) =>
-          row.map((cell, j) => {
-            const isInitial = initialGrid[i][j] !== "";
-            const isWrong = cell !== "" && Number(cell) !== solution[i][j];
-
-            return (
-              <input
-                key={`${i}-${j}`}
-                value={cell}
-                disabled={isInitial || win}
-                onChange={(e) => handleChange(i, j, e.target.value)}
-                maxLength="1"
-                className={`
-                  w-10 h-10 sm:w-12 sm:h-12 text-center text-xl font-bold outline-none transition-all
-                  /* حدود المربعات الكبرى */
-                  ${
-                    (j + 1) % 3 === 0 && j < 8
-                      ? "border-r-2 border-gray-900"
-                      : "border-r border-gray-400"
-                  }
-                  ${
-                    (i + 1) % 3 === 0 && i < 8
-                      ? "border-b-2 border-gray-900"
-                      : "border-b border-gray-400"
-                  }
-                  /* الألوان */
-                  ${
-                    isInitial
-                      ? "bg-gray-200 text-gray-900"
-                      : "bg-white text-blue-600 focus:bg-blue-50"
-                  }
-                  ${isWrong ? "bg-red-100 text-red-600 focus:bg-red-200" : ""}
-                `}
-              />
-            );
-          })
-        )}
-      </motion.div>
-
-      {/* Game Controls */}
-      <div className="mt-10 flex gap-4">
-        <button
-          onClick={() => handleNewGame()}
-          className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors shadow-lg"
+        {/* Grid */}
+        <motion.div
+          animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
+          className="grid grid-cols-9 bg-zinc-800 p-[3px] rounded-xl shadow-2xl overflow-hidden"
         >
-          🔄 RESET
-        </button>
-        {win && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="text-green-400 font-bold text-xl"
-          >
-            🏆 Perfect!
-          </motion.div>
-        )}
+          {grid.map((row, i) =>
+            row.map((cell, j) => {
+              const isInitial = initialGrid[i][j] !== "";
+
+              // ✅ حدود سميكة كل 3 خلايا
+              const thickRight = (j + 1) % 3 === 0 && j !== 8;
+              const thickBottom = (i + 1) % 3 === 0 && i !== 8;
+
+              return (
+                <input
+                  key={`${i}-${j}`}
+                  value={cell}
+                  disabled={isInitial || win}
+                  onChange={(e) => handleInput(i, j, e.target.value)}
+                  maxLength="1"
+                  className={`
+            w-10 h-10 sm:w-12 sm:h-12
+            text-center text-lg font-bold
+            outline-none
+
+            border border-gray-400
+
+            ${thickRight ? "border-r-4 border-r-black" : ""}
+            ${thickBottom ? "border-b-4 border-b-black" : ""}
+
+            ${
+              isInitial
+                ? "bg-gray-200 text-black font-extrabold"
+                : "bg-white text-blue-600"
+            }
+
+            focus:bg-blue-100
+          `}
+                />
+              );
+            })
+          )}
+        </motion.div>
+
+        {/* Description */}
+        <div className="mt-10 max-w-2xl text-sm text-gray-300 whitespace-pre-line">
+          {SUDOKU_DESCRIPTION}
+        </div>
+
+        {/* Modal */}
+        <ResultModal
+          isOpen={modal}
+          status={win ? "win" : "lose"}
+          score={score}
+          time={time}
+          onRestart={() => newGame()}
+        />
       </div>
-    </div>
+    </>
   );
 }
