@@ -2,15 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* لضمان أن النصوص تظهر دائماً بلون واضح */
+/* خلفية عامة */
 body {
   margin: 0;
-  background-color: #000000 !important; /* خلفية سوداء إجبارية */
+  background-color: #000000 !important;
   color: white;
   min-height: 100vh;
 }
 
-/* إصلاح ظهور الأرقام في السودوكو */
+/* كل خلية Sudoku */
+.sudoku-cell {
+  display: flex;
+}
+
+/* input داخل الخلية */
 .sudoku-cell input {
-  color: black !important; /* إذا كانت الخانات بيضاء، يجب أن يكون الرقم أسود */
+  width: 100%;
+  height: 100%;
+  color: black;
+}
+
+/* تأثير جميل */
+.sudoku-cell input:focus {
+  transform: scale(1.05);
+  z-index: 10;
 }
