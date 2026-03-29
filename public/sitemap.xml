@@ -1,5 +1,28 @@
-<loc>https://mindlab-ai.vercel.app/</loc>
-<loc>https://mindlab-ai.vercel.app/game/sudoku</loc>
-<loc>https://mindlab-ai.vercel.app/game/neuralGrid</loc>
-<loc>https://mindlab-ai.vercel.app/game/memory</loc>
-<loc>https://mindlab-ai.vercel.app/game/geometry</loc>
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://mindlab-ai.vercel.app/</loc>
+    <lastmod>2026-03-29</lastmod>
+    <priority>1.00</priority>
+  </url>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/game/sudoku</loc>
+    <lastmod>2026-03-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/game/neuralGrid</loc>
+    <lastmod>2026-03-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/game/memory</loc>
+    <lastmod>2026-03-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/game/geometry</loc>
+    <lastmod>2026-03-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+</urlset>
