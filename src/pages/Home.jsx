@@ -2,35 +2,42 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 export default function Home() {
-  // 🎮 قائمة الألعاب المتاحة (تم إضافة لعبة الذاكرة)
+  // 🎮 Game Roster (Updated with Geometry Lab)
   const games = [
     {
       name: "Sudoku Master",
       path: "/game/sudoku",
       emoji: "🧩",
       color: "from-green-400 to-blue-500",
-      desc: "التحدي الكلاسيكي للأرقام والمنطق",
+      desc: "The classic challenge of numbers and logic.",
     },
     {
       name: "Neural Grid",
       path: "/game/neuralGrid",
       emoji: "🧠",
       color: "from-purple-500 to-pink-500",
-      desc: "اكتشف الأنماط الرقمية بذكاء",
+      desc: "Discover numeric patterns with AI precision.",
     },
     {
       name: "Memory AI",
       path: "/game/memory",
       emoji: "🔋",
       color: "from-yellow-400 to-orange-500",
-      desc: "طابق العمليات الحسابية بدقة",
+      desc: "Match arithmetic operations with accuracy.",
+    },
+    {
+      name: "Geometry Lab",
+      path: "/game/geometry",
+      emoji: "📐",
+      color: "from-orange-500 to-red-600",
+      desc: "Bridge visual shapes with geometric laws.",
     },
   ];
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden selection:bg-purple-500/30">
       
-      {/* 🎵 جزء الحقوق الصوتي */}
+      {/* 🎵 Audio Credits Section */}
       <div className="fixed bottom-4 left-6 z-50 pointer-events-none">
         <p className="text-[9px] text-cyan-500/30 font-mono tracking-[0.2em] uppercase leading-tight italic">
           Ambient Sound: "Rain Suite Part 11" by Chad Crouch
@@ -39,7 +46,7 @@ export default function Home() {
         </p>
       </div>
 
-      {/* العنوان الرئيسي للمختبر */}
+      {/* Main Terminal Title */}
       <motion.div
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -58,19 +65,19 @@ export default function Home() {
         </div>
       </motion.div>
 
-      {/* حاوية الكروت المحسنة */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl px-4">
+      {/* Enhanced Game Card Container */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl px-4">
         {games.map((game, index) => (
           <motion.div
             key={game.name}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.15, duration: 0.5 }}
+            transition={{ delay: index * 0.1, duration: 0.5 }}
           >
             <Link to={game.path} className="group block h-full">
               <div className="relative h-full overflow-hidden bg-gray-900/40 border border-white/5 p-8 rounded-[2.5rem] transition-all duration-500 hover:border-purple-500/30 hover:bg-gray-900/60 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
                 
-                {/* تأثير الإضاءة الخلفية */}
+                {/* Background Glow Effect */}
                 <div
                   className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${game.color} opacity-0 blur-3xl group-hover:opacity-20 transition-opacity duration-700`}
                 />
@@ -83,7 +90,7 @@ export default function Home() {
                     <h3 className="text-xl font-black mb-2 group-hover:text-purple-400 transition-colors uppercase tracking-tight">
                       {game.name}
                     </h3>
-                    <p className="text-gray-500 text-xs leading-relaxed max-w-[180px] mx-auto italic">
+                    <p className="text-gray-500 text-[11px] leading-relaxed max-w-[180px] mx-auto italic">
                       {game.desc}
                     </p>
                   </div>
@@ -100,13 +107,13 @@ export default function Home() {
         ))}
       </div>
 
-      {/* التذييل التقني */}
+      {/* Technical Footer */}
       <footer className="mt-16 text-gray-700 text-[10px] font-mono tracking-[0.5em] flex flex-col items-center gap-2">
         <div className="w-12 h-[1px] bg-gray-800"></div>
-        © 2026 MINDLAB AI TERMINAL v2.5.4
+        © 2026 MINDLAB AI TERMINAL v2.6.0
       </footer>
 
-      {/* لمسات خلفية تقنية */}
+      {/* Technical Background Touches */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]"></div>
