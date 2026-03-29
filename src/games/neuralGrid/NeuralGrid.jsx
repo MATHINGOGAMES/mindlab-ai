@@ -1,278 +1,174 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { generateGrid } from "./engine";
-import { useGameStore } from "../../core/store";
 import { playSound } from "../../core/sounds";
-
-/**
- * =========================================================
- * 🧠 NEURAL GRID - OFFICIAL GAME DESCRIPTION
- * =========================================================
- *
- * Neural Grid is a fast-paced brain-training puzzle game
- * that challenges players to detect hidden mathematical patterns.
- *
- * Each level presents a dynamic 3x3 grid generated from
- * arithmetic, geometric, or mixed sequences.
- * One number is hidden and replaced with a "?".
- *
- * 🎯 Your mission:
- * Analyze the pattern and find the missing number before time runs out.
- *
- * ---------------------------------------------------------
- * ⚡ CORE FEATURES
- * ---------------------------------------------------------
- * - Procedurally generated levels (infinite gameplay)
- * - Increasing difficulty based on player level
- * - Combo system for skilled players
- * - Time pressure mechanic for excitement
- * - Special ability: Time Freeze every 5 combos
- * - Instant visual + sound feedback
- *
- * ---------------------------------------------------------
- * 🚀 ADDICTIVE GAME LOOP (HOOK)
- * ---------------------------------------------------------
- * Solve → Earn Combo → Freeze Time → Score More → Level Up → Repeat
- *
- * The faster and more accurate you are,
- * the higher your combo and score will climb.
- *
- * ---------------------------------------------------------
- * 🧩 HOW TO PLAY
- * ---------------------------------------------------------
- * 1. Observe the number grid carefully
- * 2. Detect the hidden pattern
- * 3. Calculate the missing number
- * 4. Enter your answer before time ends
- *
- * ✔ Correct Answer:
- * - Gain points
- * - Increase combo
- * - Possible time freeze bonus
- *
- * ❌ Wrong Answer / Timeout:
- * - Combo resets
- * - Move to next challenge
- *
- * ---------------------------------------------------------
- * 🧠 SKILLS DEVELOPED
- * ---------------------------------------------------------
- * - Pattern Recognition
- * - Logical Thinking
- * - Mental Math
- * - Focus Under Pressure
- *
- * ---------------------------------------------------------
- * 🎮 PERFECT FOR:
- * Students, puzzle lovers, and brain training enthusiasts.
- *
- * Simple to learn. Hard to master. Highly addictive.
- * =========================================================
- */
+import { generateAIGrid } from "../../ai/aiGridGenerator";
 
 export default function NeuralGrid() {
-  const [gameState, setGameState] = useState({
-    level: 1,
-    data: generateGrid(1),
-    input: "",
-    time: 10,
-    score: 0,
-    combo: 0,
-    feedback: "",
-    status: "playing",
-    isFrozen: false,
-  });
+  const [stage, setStage] = useState("PRIMARY");
+  const [level, setLevel] = useState(1);
+  const [grid, setGrid] = useState([]);
+  const [answer, setAnswer] = useState(null);
+  const [userInput, setUserInput] = useState("");
+  const [status, setStatus] = useState("loading"); // loading, playing, success, error
+  const [score, setScore] = useState(0);
 
-  const addXP = useGameStore((s) => s.addXP);
-  const inputRef = useRef(null);
+  // تحميل التحدي الجديد
+  const nextChallenge = useCallback(async () => {
+    setStatus("loading");
+    setUserInput("");
 
-  const nextLevel = useCallback(() => {
-    setGameState((prev) => {
-      const nextLvl = prev.level + 1;
-      return {
-        ...prev,
-        level: nextLvl,
-        data: generateGrid(nextLvl),
-        input: "",
-        time: 10,
-        isFrozen: false,
-        feedback: "",
-        status: "playing",
-      };
-    });
-  }, []);
+    // نستخدم المحرك بوضع GRID وحجم 3x3
+    const data = await generateAIGrid(level, 3, "GRID", stage);
 
-  const handleFail = useCallback(() => {
-    if (gameState.status === "checking") return;
+    if (data && data.displayGrid) {
+      setGrid(data.displayGrid);
+      setAnswer(data.answer);
+      setStatus("playing");
+    }
+  }, [level, stage]);
 
-    playSound("wrong");
-    setGameState((prev) => ({
-      ...prev,
-      feedback: "❌ WRONG!",
-      combo: 0,
-      status: "checking",
-    }));
+  useEffect(() => {
+    nextChallenge();
+  }, [nextChallenge]);
 
-    setTimeout(nextLevel, 800);
-  }, [nextLevel, gameState.status]);
+  const checkAnswer = (e) => {
+    e.preventDefault();
+    if (status !== "playing" || userInput === "") return;
 
-  const handleSuccess = useCallback(() => {
-    playSound("correct");
+    if (parseInt(userInput) === answer) {
+      playSound("correct");
+      setStatus("success");
+      setScore((s) => s + 50);
 
-    setGameState((prev) => {
-      const newCombo = prev.combo + 1;
-      const isNowFrozen = newCombo > 0 && newCombo % 5 === 0;
-      const gained = 10 + newCombo * 2;
-
-      if (isNowFrozen) playSound("win");
-      addXP(gained);
-
-      return {
-        ...prev,
-        combo: newCombo,
-        score: prev.score + gained,
-        isFrozen: isNowFrozen,
-        feedback: isNowFrozen ? "❄️ TIME FROZEN!" : "✅ CORRECT!",
-        status: "checking",
-      };
-    });
-
-    setTimeout(nextLevel, 600);
-  }, [addXP, nextLevel]);
-
-  const checkAnswer = () => {
-    if (gameState.status !== "playing" || !gameState.input) return;
-
-    if (parseInt(gameState.input) === gameState.data.answer) {
-      handleSuccess();
+      setTimeout(() => {
+        if (level % 5 === 0) playSound("win");
+        setLevel((l) => l + 1);
+      }, 1500);
     } else {
-      handleFail();
+      playSound("wrong");
+      setStatus("error");
+      setTimeout(() => setStatus("playing"), 1000); // إتاحة المحاولة مرة أخرى
     }
   };
 
-  useEffect(() => {
-    if (gameState.isFrozen || gameState.status !== "playing") return;
-
-    const timer = setInterval(() => {
-      setGameState((prev) => {
-        if (prev.time <= 1) {
-          clearInterval(timer);
-          handleFail();
-          return { ...prev, time: 0 };
-        }
-        return { ...prev, time: prev.time - 1 };
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [gameState.level, gameState.isFrozen, gameState.status, handleFail]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [gameState.level]);
-
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-sans overflow-hidden p-6 relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-900 via-black to-black opacity-60"></div>
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center p-8 font-sans">
+      {/* 1. TOP NAV - Stage Selector */}
+      <div className="mb-12 flex flex-col items-center gap-4">
+        <h2 className="text-[10px] uppercase tracking-[0.4em] text-zinc-500 font-black">
+          Neural Training
+        </h2>
+        <div className="flex bg-zinc-900/80 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl">
+          {["PRIMARY", "MIDDLE", "SECONDARY"].map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setStage(s);
+                setLevel(1);
+                setScore(0);
+              }}
+              className={`px-8 py-2.5 rounded-xl text-xs font-black transition-all duration-300 ${
+                stage === s
+                  ? "bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]"
+                  : "text-zinc-500 hover:text-white"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <div className="flex gap-10 mb-10 relative z-10 bg-black/40 border border-white/5 p-5 rounded-3xl backdrop-blur-xl shadow-inner">
+      {/* 2. STATS BAR */}
+      <div className="w-full max-w-sm grid grid-cols-3 bg-zinc-900/30 p-6 rounded-3xl border border-white/5 mb-12 shadow-2xl">
+        <StatItem label="LVL" value={level} color="text-blue-400" />
+        <StatItem label="SCORE" value={score} color="text-green-400" />
         <StatItem
-          label="Level"
-          value={gameState.level}
-          color="text-purple-400"
-        />
-        <StatItem
-          label="Score"
-          value={gameState.score}
-          color="text-green-400"
-        />
-        <StatItem
-          label="Combo"
-          value={`x${gameState.combo}`}
-          color="text-yellow-400"
+          label="STAGE"
+          value={stage.charAt(0)}
+          color="text-yellow-500"
         />
       </div>
 
-      <h1 className="text-6xl font-black mb-12 relative z-10 tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-        NEURAL GRID
-      </h1>
-
-      <div className="w-80 h-3 bg-gray-800 rounded-full mb-12 relative z-10 overflow-hidden">
-        <motion.div
-          initial={{ width: "100%" }}
-          animate={{
-            width: `${(gameState.time / 10) * 100}%`,
-            backgroundColor: gameState.isFrozen
-              ? "#3b82f6"
-              : gameState.time < 4
-              ? "#ef4444"
-              : "#a855f7",
-          }}
-          transition={{ duration: 0.3 }}
-          className="h-full rounded-full"
-        />
-      </div>
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={gameState.level}
-          className="grid grid-cols-3 gap-6 relative z-10 bg-gray-900/40 p-8 rounded-[2.5rem]"
-        >
-          {gameState.data.displayGrid.map((row, i) =>
-            row.map((cell, j) => <GridCell key={`${i}-${j}`} cell={cell} />)
-          )}
-        </motion.div>
-      </AnimatePresence>
-
-      <div className="mt-16 relative z-10 flex flex-col items-center gap-8">
-        <input
-          ref={inputRef}
-          value={gameState.input}
-          onChange={(e) =>
-            setGameState((p) => ({
-              ...p,
-              input: e.target.value.replace(/[^0-9]/g, ""),
-            }))
-          }
-          onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
-          className="bg-black border-4 border-purple-500 text-5xl text-center w-48 h-24 rounded-2xl"
-          placeholder="?"
-        />
-
-        <button
-          onClick={checkAnswer}
-          className="px-10 py-3 bg-white text-black rounded-xl"
-        >
-          Submit
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {gameState.feedback && (
-          <motion.div className="fixed bottom-10 text-2xl font-bold">
-            {gameState.feedback}
-          </motion.div>
+      {/* 3. MAIN GRID */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
+        {status === "loading" ? (
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            {grid.map((row, rIdx) =>
+              row.map((cell, cIdx) => (
+                <motion.div
+                  key={`${rIdx}-${cIdx}`}
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: (rIdx * 3 + cIdx) * 0.05 }}
+                  className={`w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center rounded-2xl text-2xl font-black border-2 transition-all duration-500 ${
+                    cell === "?"
+                      ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_30px_rgba(37,99,235,0.2)] animate-pulse"
+                      : "bg-zinc-900 border-white/5 text-zinc-400"
+                  }`}
+                >
+                  {cell}
+                </motion.div>
+              ))
+            )}
+          </div>
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* 4. INPUT AREA */}
+      <div className="mt-12 w-full max-w-xs">
+        <form onSubmit={checkAnswer} className="relative group">
+          <input
+            type="number"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            disabled={status !== "playing"}
+            placeholder="?"
+            className={`w-full bg-zinc-900 border-2 rounded-2xl py-5 text-center text-3xl font-black outline-none transition-all duration-300 ${
+              status === "success"
+                ? "border-green-500 bg-green-500/10 text-green-400"
+                : status === "error"
+                ? "border-red-500 bg-red-500/10 text-red-400 animate-shake"
+                : "border-white/10 focus:border-blue-600 text-white"
+            }`}
+            autoFocus
+          />
+          <button
+            type="submit"
+            className="hidden" // الزر مخفي، الإدخال يتم عبر مفتاح Enter
+          >
+            Submit
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
+            {status === "success"
+              ? "Brilliant Correction!"
+              : status === "error"
+              ? "Pattern Mismatch - Try Again"
+              : "Decipher the sequence pattern"}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
-function GridCell({ cell }) {
-  return (
-    <div className="w-24 h-24 flex items-center justify-center bg-gray-800 rounded-xl text-3xl">
-      {cell}
-    </div>
-  );
-}
-
+// مكون صغير لعرض الإحصائيات
 function StatItem({ label, value, color }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-xs">{label}</span>
-      <span className={`text-2xl ${color}`}>{value}</span>
+      <span className="text-[8px] font-black text-zinc-600 mb-1 tracking-widest">
+        {label}
+      </span>
+      <span className={`text-2xl font-black ${color} tabular-nums`}>
+        {value}
+      </span>
     </div>
   );
 }
