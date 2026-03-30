@@ -44,9 +44,7 @@ export default function NeuralGrid() {
       setStatus("success");
       setScore((s) => s + 50);
 
-      setTimeout(() => {
-        setIsModalOpen(true);
-      }, 1000);
+      setTimeout(() => setIsModalOpen(true), 1000);
     } else {
       playSound("wrong");
       setStatus("error");
@@ -56,7 +54,6 @@ export default function NeuralGrid() {
 
   return (
     <>
-      {/* SEO */}
       <Helmet>
         <title>Neural Grid | Pattern Recognition Game | MINDLAB</title>
         <meta
@@ -98,19 +95,35 @@ export default function NeuralGrid() {
           <StatItem label="STAGE" value={stage[0]} color="text-yellow-500" />
         </div>
 
-        {/* Grid */}
-        <div className="flex-1 flex items-center justify-center">
-          {status === "loading" ? (
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {grid.map((row, rIdx) =>
-                row.map((cell, cIdx) => (
+        {/* Grid + Input */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start w-full justify-center">
+          {/* 🔹 Neural Grid */}
+          <div className="grid grid-cols-3 grid-rows-3 gap-0 bg-[#121212] p-2 rounded-3xl shadow-[0_0_60px_rgba(0,210,255,0.4)] border-[8px] border-[#00d2ff]/30">
+            {grid.map((row, rIdx) =>
+              row.map((cell, cIdx) => {
+                const borderTop =
+                  rIdx % 3 === 0
+                    ? "border-t-4 border-t-[#00d2ff]/50"
+                    : "border-t border-t-[#00d2ff]/20";
+                const borderLeft =
+                  cIdx % 3 === 0
+                    ? "border-l-4 border-l-[#00d2ff]/50"
+                    : "border-l border-l-[#00d2ff]/20";
+                const borderRight =
+                  (cIdx + 1) % 3 === 0
+                    ? "border-r-4 border-r-[#00d2ff]/50"
+                    : "border-r border-r-[#00d2ff]/20";
+                const borderBottom =
+                  (rIdx + 1) % 3 === 0
+                    ? "border-b-4 border-b-[#00d2ff]/50"
+                    : "border-b border-b-[#00d2ff]/20";
+
+                return (
                   <motion.div
                     key={`${rIdx}-${cIdx}`}
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className={`w-20 h-20 flex items-center justify-center rounded-2xl text-2xl font-black ${
+                    className={`w-20 h-20 flex items-center justify-center rounded-2xl text-2xl font-black ${borderTop} ${borderLeft} ${borderRight} ${borderBottom} ${
                       cell === "?"
                         ? "bg-blue-600/20 text-blue-400 animate-pulse"
                         : "bg-zinc-900 text-zinc-400"
@@ -118,32 +131,32 @@ export default function NeuralGrid() {
                   >
                     {cell}
                   </motion.div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
+                );
+              })
+            )}
+          </div>
 
-        {/* Input */}
-        <div className="mt-12 w-full max-w-xs">
-          <form onSubmit={checkAnswer}>
-            <input
-              type="number"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              disabled={status !== "playing"}
-              className="w-full bg-zinc-900 border-2 border-white/10 rounded-2xl py-5 text-center text-3xl font-black"
-              placeholder="?"
-            />
-          </form>
+          {/* 🔹 Input Panel */}
+          <div className="flex flex-col gap-6 bg-[#111111]/80 p-6 rounded-[2.5rem] border border-[#00d2ff]/20 backdrop-blur-sm">
+            <form onSubmit={checkAnswer}>
+              <input
+                type="number"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                disabled={status !== "playing"}
+                className="w-40 bg-zinc-900 border-2 border-white/10 rounded-2xl py-5 text-center text-3xl font-black"
+                placeholder="?"
+              />
+            </form>
 
-          <p className="text-center text-xs mt-4 text-zinc-500">
-            {status === "success"
-              ? "Correct!"
-              : status === "error"
-              ? "Wrong!"
-              : "Find the pattern"}
-          </p>
+            <p className="text-center text-xs mt-4 text-zinc-500">
+              {status === "success"
+                ? "Correct!"
+                : status === "error"
+                ? "Wrong!"
+                : "Find the pattern"}
+            </p>
+          </div>
         </div>
 
         {/* Result Modal */}
@@ -162,84 +175,18 @@ export default function NeuralGrid() {
           }}
         />
 
-        {/* 🧠 Neural Grid Description */}
+        {/* Description */}
         <div className="max-w-3xl mt-16 text-center leading-relaxed">
           <h2 className="text-2xl font-black text-purple-400 mb-4">
             🧠 Neural Grid – Description
           </h2>
-
           <p className="text-zinc-400 text-sm mb-6">
             Neural Grid is an AI-powered brain-training game that strengthens
             pattern recognition, visual memory, and problem-solving skills.
-            Players are presented with AI-generated grids and must identify the
-            hidden numbers or patterns with precision.
           </p>
-
           <p className="text-zinc-500 text-sm mb-10">
             Each stage increases in difficulty, requiring sharper attention,
-            faster recall, and enhanced cognitive processing. This game combines
-            logic, spatial awareness, and memory exercises into a fun, immersive
-            experience.
-          </p>
-
-          <h3 className="text-xl font-bold text-white mb-4">
-            🎯 Why It Matters (Benefits)
-          </h3>
-
-          <div className="grid sm:grid-cols-2 gap-6 text-left mb-10">
-            <div>
-              <h4 className="text-purple-400 font-semibold">
-                Focus & Concentration
-              </h4>
-              <p className="text-zinc-500 text-sm">
-                Improves sustained attention and mental clarity through pattern
-                tracking.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-semibold">Visual Memory</h4>
-              <p className="text-zinc-500 text-sm">
-                Strengthens the ability to remember sequences, positions, and
-                numerical patterns.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-semibold">Cognitive Speed</h4>
-              <p className="text-zinc-500 text-sm">
-                Trains the brain to process information quickly and react
-                accurately.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-semibold">
-                Problem-Solving Skills
-              </h4>
-              <p className="text-zinc-500 text-sm">
-                Encourages logical thinking and deduction based on observed
-                patterns.
-              </p>
-            </div>
-
-            <div className="sm:col-span-2">
-              <h4 className="text-purple-400 font-semibold">Mental Agility</h4>
-              <p className="text-zinc-500 text-sm">
-                Keeps your brain active, flexible, and responsive across
-                challenges.
-              </p>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-bold text-white mb-4">
-            🚀 The Experience
-          </h3>
-
-          <p className="text-zinc-400 text-sm">
-            With AI-generated challenges and adaptive difficulty, each session
-            is unique. Neural Grid is perfect for students, gamers, or anyone
-            looking to sharpen their mind while having fun.
+            faster recall, and enhanced cognitive processing.
           </p>
         </div>
       </div>

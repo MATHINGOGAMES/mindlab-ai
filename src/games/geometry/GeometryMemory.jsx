@@ -6,7 +6,7 @@ import { playSound } from "../../core/sounds";
 import { Helmet } from "react-helmet-async";
 import ResultModal from "../../components/shared/ResultModal";
 
-// Geometric Shapes
+// Geometric Shapes with neon colors
 const SHAPES = [
   { id: 1, icon: "▲", color: "bg-blue-500", shadow: "shadow-blue-500/50" },
   { id: 2, icon: "■", color: "bg-red-500", shadow: "shadow-red-500/50" },
@@ -53,7 +53,6 @@ export default function GeometryMemory() {
     setUserSequence(newUserSequence);
 
     const currentIndex = newUserSequence.length - 1;
-
     if (shape.id !== sequence[currentIndex].id) {
       playSound("wrong");
       setStatus("lose");
@@ -62,13 +61,12 @@ export default function GeometryMemory() {
     }
 
     playSound("correct");
-
     if (newUserSequence.length === sequence.length) {
       setScore((s) => s + level * 10);
       setTimeout(() => {
         setLevel((l) => l + 1);
         startNextLevel();
-      }, 1000);
+      }, 800);
     }
   };
 
@@ -81,7 +79,6 @@ export default function GeometryMemory() {
     setSequence([]);
     setLevel(1);
     setScore(0);
-
     setTimeout(() => {
       const firstShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
       setSequence([firstShape]);
@@ -91,7 +88,6 @@ export default function GeometryMemory() {
 
   return (
     <>
-      {/* SEO */}
       <Helmet>
         <title>Geometry Memory | Sequence Brain Training | MINDLAB</title>
         <meta
@@ -100,29 +96,28 @@ export default function GeometryMemory() {
         />
       </Helmet>
 
-      <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center p-8">
+      <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center p-8 font-sans">
         {/* Header */}
         <div className="mb-12 text-center">
           <h1 className="text-[10px] tracking-[5px] text-zinc-500 font-black uppercase mb-4">
             Visual Memory Core
           </h1>
-
           <div className="flex gap-8 bg-zinc-900/50 px-10 py-4 rounded-3xl border border-white/5 backdrop-blur-md">
             <Stat label="LEVEL" value={level} color="text-blue-400" />
             <Stat label="SCORE" value={score} color="text-green-400" />
           </div>
         </div>
 
-        {/* Grid */}
+        {/* Shape Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 max-w-md w-full">
           {SHAPES.map((shape) => (
             <motion.button
               key={shape.id}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 20px cyan" }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleShapeClick(shape)}
               className={`
-                h-24 sm:h-32 rounded-3xl flex items-center justify-center text-4xl transition-all duration-300
+                h-24 sm:h-32 rounded-3xl flex items-center justify-center text-5xl font-black transition-all duration-300
                 ${
                   activeShape === shape.id
                     ? `${shape.color} ${shape.shadow} scale-110`
@@ -141,92 +136,23 @@ export default function GeometryMemory() {
         </div>
 
         {/* Status */}
-        <p className="mt-12 text-[10px] font-bold text-zinc-600 uppercase tracking-[0.3em] animate-pulse">
+        <p className="mt-12 text-[10px] font-bold text-cyan-400 uppercase tracking-[0.3em] animate-pulse">
           {isDisplaying ? "Watch the Pattern..." : "Repeat the Sequence!"}
         </p>
 
-        {/* 🧠 DESCRIPTION SECTION */}
+        {/* Description Section */}
         <div className="max-w-3xl mt-16 text-center leading-relaxed">
           <h2 className="text-2xl font-black text-purple-400 mb-4">
             🧠 Geometric Memory Game – Description
           </h2>
-
           <p className="text-zinc-400 text-sm mb-6">
-            Geometric Memory is an advanced brain-training game designed to
-            enhance your focus, visual memory, and pattern recognition skills
-            through engaging geometric challenges. Players are presented with a
-            dynamic grid of shapes, symbols, or mathematical patterns and must
-            remember and match pairs with increasing difficulty.
-          </p>
-
-          <p className="text-zinc-500 text-sm mb-10">
-            As the levels progress, the complexity of patterns grows, requiring
-            sharper attention, faster recall, and stronger cognitive processing.
-            The game combines elements of logic, spatial awareness, and memory
-            training into a seamless and immersive experience.
-          </p>
-
-          <h3 className="text-xl font-bold text-white mb-4">
-            🎯 Why It Matters (Benefits)
-          </h3>
-
-          <div className="grid sm:grid-cols-2 gap-6 text-left mb-10">
-            <div>
-              <h4 className="text-purple-400 font-semibold">
-                Focus & Concentration
-              </h4>
-              <p className="text-zinc-500 text-sm">
-                Training your brain to track visual elements strengthens
-                sustained attention over time.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-semibold">Visual Memory</h4>
-              <p className="text-zinc-500 text-sm">
-                Enhances your ability to remember shapes, positions, and
-                patterns quickly.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-semibold">Cognitive Speed</h4>
-              <p className="text-zinc-500 text-sm">
-                Improves how fast your brain processes and reacts to visual
-                information.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-semibold">
-                Problem-Solving Skills
-              </h4>
-              <p className="text-zinc-500 text-sm">
-                Encourages logical thinking and pattern recognition.
-              </p>
-            </div>
-
-            <div className="sm:col-span-2">
-              <h4 className="text-purple-400 font-semibold">Mental Agility</h4>
-              <p className="text-zinc-500 text-sm">
-                Keeps your brain active, flexible, and responsive.
-              </p>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-bold text-white mb-4">
-            🚀 The Experience
-          </h3>
-
-          <p className="text-zinc-400 text-sm">
-            With AI-generated levels and adaptive difficulty, every session
-            feels fresh and challenging. Whether you're a student, gamer, or
-            someone looking to sharpen their mind, Geometric Memory offers a
-            powerful and fun way to boost your mental performance.
+            Geometric Memory is a neon-style brain-training game to enhance
+            focus, visual memory, and pattern recognition. Players must repeat
+            sequences of geometric shapes with increasing difficulty.
           </p>
         </div>
 
-        {/* Modal */}
+        {/* Result Modal */}
         <ResultModal
           isOpen={isModalOpen}
           status={status}

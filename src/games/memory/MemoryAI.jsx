@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { playSound } from "../../core/sounds";
 import { generateAIGrid } from "../../ai/aiGridGenerator";
 import { Helmet } from "react-helmet-async";
-import ResultModal from "../../components/shared/ResultModal"; // ✅ جديد
+import ResultModal from "../../components/shared/ResultModal";
 
 export default function MemoryAI() {
   const [stage, setStage] = useState("PRIMARY");
@@ -15,18 +15,14 @@ export default function MemoryAI() {
   const [solved, setSolved] = useState([]);
   const [status, setStatus] = useState("loading");
   const [score, setScore] = useState(0);
-
-  // ✅ حالة المودال
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // تحميل المستوى
   const loadGame = useCallback(async () => {
     setStatus("loading");
-
     const pairCount = Math.min(4 + Math.floor(level / 2), 10);
     const data = await generateAIGrid(level, pairCount, "PAIRS", stage);
 
-    if (data && data.cards && data.cards.length > 0) {
+    if (data && data.cards?.length > 0) {
       setCards(data.cards);
       setFlipped([]);
       setSolved([]);
@@ -47,7 +43,6 @@ export default function MemoryAI() {
 
     if (newFlipped.length === 2) {
       setStatus("checking");
-
       const [c1, c2] = [cards[newFlipped[0]], cards[newFlipped[1]]];
 
       if (c1.matchId === c2.matchId) {
@@ -66,15 +61,13 @@ export default function MemoryAI() {
     }
   };
 
-  // ✅ منطق الفوز (معدل)
   useEffect(() => {
     if (cards.length > 0 && solved.length === cards.length) {
       playSound("win");
-      setIsModalOpen(true); // فتح المودال بدل رفع المستوى مباشرة
+      setIsModalOpen(true);
     }
   }, [solved, cards]);
 
-  // ✅ الانتقال للمستوى التالي
   const handleNext = () => {
     setIsModalOpen(false);
     setLevel((l) => l + 1);
@@ -82,9 +75,8 @@ export default function MemoryAI() {
 
   return (
     <>
-      {/* SEO */}
       <Helmet>
-        <title>Memory AI | Brain Training Game | MINDLAB</title>
+        <title>Memory AI | Brain Training | MINDLAB</title>
         <meta
           name="description"
           content={`Match pairs and train memory. Stage: ${stage}`}
@@ -92,12 +84,11 @@ export default function MemoryAI() {
       </Helmet>
 
       <div className="min-h-screen bg-[#050505] text-white p-8 flex flex-col items-center font-sans">
-        {/* Header */}
+        {/* Stage Selector */}
         <div className="mb-10 flex flex-col items-center gap-4">
           <h1 className="text-[10px] tracking-[5px] text-zinc-500 font-black uppercase">
             Educational Path
           </h1>
-
           <div className="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5">
             {["PRIMARY", "MIDDLE", "SECONDARY"].map((s) => (
               <button
@@ -124,7 +115,7 @@ export default function MemoryAI() {
           <Stat label="STAGE" value={stage[0]} color="text-yellow-500" />
         </div>
 
-        {/* Game */}
+        {/* Memory Grid */}
         <div className="flex-1 flex items-center justify-center w-full max-w-4xl">
           {status === "loading" ? (
             <div className="flex flex-col items-center gap-4">
@@ -134,9 +125,9 @@ export default function MemoryAI() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {cards.map((card, idx) => (
-                <div
+                <motion.div
                   key={card.id}
-                  className="relative w-20 h-28 sm:w-28 sm:h-36 cursor-pointer"
+                  className="relative w-24 h-36 cursor-pointer"
                   onClick={() => handleCardClick(idx)}
                   style={{ perspective: "1000px" }}
                 >
@@ -148,17 +139,17 @@ export default function MemoryAI() {
                         flipped.includes(idx) || solved.includes(idx) ? 180 : 0,
                     }}
                   >
-                    {/* Back */}
-                    <div className="absolute inset-0 bg-zinc-900 rounded-2xl flex items-center justify-center">
-                      ?
+                    {/* Back: مركبة فضائية 🛸 */}
+                    <div className="absolute inset-0 bg-[#0f0f0f] rounded-2xl flex items-center justify-center text-3xl font-bold text-cyan-400 shadow-[0_0_20px_cyan]">
+                      🛸
                     </div>
 
                     {/* Front */}
                     <div
-                      className={`absolute inset-0 flex items-center justify-center rounded-2xl font-bold ${
+                      className={`absolute inset-0 flex items-center justify-center rounded-2xl font-bold text-2xl shadow-[0_0_20px_cyan] ${
                         solved.includes(idx)
                           ? "bg-green-500/20 text-green-400"
-                          : "bg-purple-600 text-white"
+                          : "bg-[#1a0f3f] text-pink-400"
                       }`}
                       style={{
                         transform: "rotateY(180deg)",
@@ -168,7 +159,7 @@ export default function MemoryAI() {
                       {card.content}
                     </div>
                   </motion.div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
@@ -179,7 +170,7 @@ export default function MemoryAI() {
           {status === "playing" ? "Find pairs" : "Checking..."}
         </div>
 
-        {/* ✅ Result Modal */}
+        {/* Result Modal */}
         <ResultModal
           isOpen={isModalOpen}
           status="win"

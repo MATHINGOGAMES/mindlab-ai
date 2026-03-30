@@ -32,11 +32,17 @@ export default function Home() {
       color: "from-orange-500 to-red-600",
       desc: "Bridge visual shapes with geometric laws.",
     },
+    {
+      name: "Math Advance",
+      path: "/game/NeonMathAdvancedPro",
+      emoji: "📐",
+      color: "from-green-500 to-red-600",
+      desc: "Bridge visual shapes with geometric laws.",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden selection:bg-purple-500/30">
-      
       {/* 🎵 Audio Credits Section */}
       <div className="fixed bottom-4 left-6 z-50 pointer-events-none">
         <p className="text-[9px] text-cyan-500/30 font-mono tracking-[0.2em] uppercase leading-tight italic">
@@ -54,7 +60,10 @@ export default function Home() {
         className="text-center mb-12"
       >
         <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-4 bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500">
-          MIND<span className="text-purple-500 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">LAB</span>
+          MIND
+          <span className="text-purple-500 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+            LAB
+          </span>
         </h1>
         <div className="flex items-center justify-center gap-4">
           <div className="h-[1px] w-8 bg-purple-500/50"></div>
@@ -76,7 +85,6 @@ export default function Home() {
           >
             <Link to={game.path} className="group block h-full">
               <div className="relative h-full overflow-hidden bg-gray-900/40 border border-white/5 p-8 rounded-[2.5rem] transition-all duration-500 hover:border-purple-500/30 hover:bg-gray-900/60 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-                
                 {/* Background Glow Effect */}
                 <div
                   className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${game.color} opacity-0 blur-3xl group-hover:opacity-20 transition-opacity duration-700`}
@@ -109,8 +117,8 @@ export default function Home() {
 
       {/* Technical Footer */}
       <footer className="mt-16 text-gray-700 text-[10px] font-mono tracking-[0.5em] flex flex-col items-center gap-2">
-        <div className="w-12 h-[1px] bg-gray-800"></div>
-        © 2026 MINDLAB AI TERMINAL v2.6.0
+        <div className="w-12 h-[1px] bg-gray-800"></div>© 2026 MINDLAB AI
+        TERMINAL v2.6.0
       </footer>
 
       {/* Technical Background Touches */}
