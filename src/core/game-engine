@@ -1,0 +1,162 @@
+import { create } from "zustand";
+import { useState, useEffect, useCallback } from "react";
+
+// ---------- 1. GLOBAL STORE (ZUSTAND) ----------
+// نظام إدارة الحالة المركزية للمهارات والنقاط
+export const useGameStore = create((set) => ({
+  profile: {
+    level: 1,
+    xp: 0,
+    streak: 0,
+    skills: {
+      addition: { success: 0, total: 0 },
+      subtraction: { success: 0, total: 0 },
+      multiplication: { success: 0, total: 0 },
+      division: { success: 0, total: 0 },
+    },
+  },
+
+  addXP: (amount) =>
+    set((state) => {
+      const newXP = state.profile.xp + amount;
+      const newLevel = Math.floor(newXP / 100) + 1;
+      return {
+        profile: { ...state.profile, xp: newXP, level: newLevel },
+      };
+    }),
+
+  updateSkill: (skill, correct) =>
+    set((state) => {
+      const s = state.profile.skills[skill];
+      return {
+        profile: {
+          ...state.profile,
+          streak: correct ? state.profile.streak + 1 : 0,
+          skills: {
+            ...state.profile.skills,
+            [skill]: {
+              success: s.success + (correct ? 1 : 0),
+              total: s.total + 1,
+            },
+          },
+        },
+      };
+    }),
+}));
+
+// ---------- 2. LEARNING LOGIC ----------
+
+// دالة لتحديد أضعف مهارة عند اللاعب لتركيز الأسئلة عليها
+const getWeakestSkill = (skills) => {
+  return Object.entries(skills)
+    .map(([key, val]) => ({
+      skill: key,
+      score: val.total === 0 ? 0 : val.success / val.total,
+    }))
+    .sort((a, b) => a.score - b.score)[0].skill;
+};
+
+const calculateXP = (level, timeLeft, streak) => {
+  return Math.floor(level * 10 + timeLeft * 2 + streak * 5);
+};
+
+// ---------- 3. QUESTION GENERATOR ----------
+
+const generateQuestion = (skill, level) => {
+  const max = 5 + level * 3;
+  let a = Math.floor(Math.random() * max) + 1;
+  let b = Math.floor(Math.random() * max) + 1;
+  let question = "";
+  let answer = 0;
+
+  switch (skill) {
+    case "addition":
+      question = `${a} + ${b}`;
+      answer = a + b;
+      break;
+    case "subtraction":
+      if (a < b) [a, b] = [b, a]; // لضمان نواتج إيجابية
+      question = `${a} - ${b}`;
+      answer = a - b;
+      break;
+    case "multiplication":
+      question = `${a} × ${b}`;
+      answer = a * b;
+      break;
+    case "division":
+      a = a * b; // لضمان قسمة بدون فواصل
+      question = `${a} ÷ ${b}`;
+      answer = a / b;
+      break;
+  }
+
+  const options = new Set([answer]);
+  while (options.size < 4) {
+    const fake = answer + Math.floor(Math.random() * 10 - 5);
+    if (fake >= 0 && fake !== answer) options.add(fake);
+  }
+
+  return {
+    question,
+    answer,
+    options: Array.from(options).sort(() => Math.random() - 0.5),
+  };
+};
+
+// ---------- 4. THE GAME ENGINE HOOK ----------
+
+export const useGameEngine = () => {
+  const { profile, updateSkill, addXP } = useGameStore();
+  const [currentSkill, setCurrentSkill] = useState("addition");
+  const [question, setQuestion] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(10);
+
+  const loadQuestion = useCallback(() => {
+    const weakest = getWeakestSkill(profile.skills);
+    setCurrentSkill(weakest);
+    setQuestion(generateQuestion(weakest, profile.level));
+    setTimeLeft(10);
+  }, [profile.level, profile.skills]);
+
+  useEffect(() => {
+    if (!question) loadQuestion();
+  }, [loadQuestion, question]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((t) => (t > 0 ? t - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const answer = (value) => {
+    if (!question) return;
+    const correct = value === question.answer;
+    updateSkill(currentSkill, correct);
+
+    if (correct) {
+      const gainedXP = calculateXP(profile.level, timeLeft, profile.streak);
+      addXP(gainedXP);
+    }
+
+    // تأخير بسيط لإعطاء فرصة لرؤية لون الإجابة (صح/خطأ) في الـ UI
+    setTimeout(() => {
+      loadQuestion();
+    }, 600);
+  };
+
+  return { question, timeLeft, answer, skill: currentSkill, profile };
+};
+
+// ---------- 5. AI ADVISOR (ENGLISH) ----------
+
+export const getAdvice = (profile) => {
+  const weakest = getWeakestSkill(profile.skills);
+  const messages = {
+    addition: "Focus on speed: addition is the foundation of logic.",
+    subtraction: "Precision matters. Watch your subtraction signs!",
+    multiplication: "Efficiency boost: try memorizing complex multiples.",
+    division: "Challenge detected: Division requires inverse thinking.",
+  };
+  return messages[weakest] || "Keep pushing, your brain is adapting!";
+};

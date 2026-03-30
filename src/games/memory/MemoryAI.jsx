@@ -1,11 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+// تأكد من استيراد useRef و AnimatePresence بدقة هنا
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { playSound } from "../../core/sounds";
 import { generateAIGrid } from "../../ai/aiGridGenerator";
 import { Helmet } from "react-helmet-async";
 import ResultModal from "../../components/shared/ResultModal";
+
+const WORLDS = {
+  PRIMARY: {
+    name: "NEON ALPHABET",
+    color: "text-cyan-400",
+    glow: "shadow-[0_0_20px_rgba(34,211,238,0.4)]",
+    border: "border-cyan-500/30",
+  },
+  MIDDLE: {
+    name: "LOGIC VORTEX",
+    color: "text-purple-400",
+    glow: "shadow-[0_0_20px_rgba(192,132,252,0.4)]",
+    border: "border-purple-500/30",
+  },
+  SECONDARY: {
+    name: "QUANTUM CORE",
+    color: "text-orange-400",
+    glow: "shadow-[0_0_20px_rgba(251,146,60,0.4)]",
+    border: "border-orange-500/30",
+  },
+};
 
 export default function MemoryAI() {
   const [stage, setStage] = useState("PRIMARY");
@@ -14,25 +36,54 @@ export default function MemoryAI() {
   const [flipped, setFlipped] = useState([]);
   const [solved, setSolved] = useState([]);
   const [status, setStatus] = useState("loading");
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(1000);
+  const [energy, setEnergy] = useState(100);
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isTimeFrozen, setIsTimeFrozen] = useState(false);
+  const [powers, setPowers] = useState({ freeze: 2, scan: 1 });
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // استخدام useRef للتحكم في التوقيت بدقة
+  const timerRef = useRef(null);
 
   const loadGame = useCallback(async () => {
     setStatus("loading");
-    const pairCount = Math.min(4 + Math.floor(level / 2), 10);
-    const data = await generateAIGrid(level, pairCount, "PAIRS", stage);
-
-    if (data && data.cards?.length > 0) {
-      setCards(data.cards);
-      setFlipped([]);
-      setSolved([]);
-      setStatus("playing");
+    setEnergy(100);
+    // تأكد من توليد عدد زوجي من البطاقات
+    const pairCount = Math.min(3 + Math.floor(level / 2), 10);
+    try {
+      const data = await generateAIGrid(level, pairCount, "PAIRS", stage);
+      if (data && data.cards) {
+        setCards(data.cards);
+        setFlipped([]);
+        setSolved([]);
+        setStatus("playing");
+      }
+    } catch (error) {
+      console.error("AI Grid Error:", error);
     }
   }, [level, stage]);
 
   useEffect(() => {
     loadGame();
   }, [loadGame]);
+
+  // تفعيل محرك الوقت باستخدام useRef
+  useEffect(() => {
+    if (status === "playing" && energy > 0 && !isTimeFrozen) {
+      timerRef.current = setInterval(() => {
+        setEnergy((prev) => Math.max(0, prev - (0.3 + level * 0.1)));
+      }, 100);
+    }
+
+    if (energy <= 0 && status === "playing") {
+      clearInterval(timerRef.current);
+      setStatus("lost");
+      setIsModalOpen(true);
+    }
+
+    return () => clearInterval(timerRef.current);
+  }, [status, energy, isTimeFrozen, level]);
 
   const handleCardClick = (idx) => {
     if (status !== "playing" || flipped.includes(idx) || solved.includes(idx))
@@ -43,155 +94,264 @@ export default function MemoryAI() {
 
     if (newFlipped.length === 2) {
       setStatus("checking");
-      const [c1, c2] = [cards[newFlipped[0]], cards[newFlipped[1]]];
+      const [first, second] = newFlipped;
 
-      if (c1.matchId === c2.matchId) {
+      if (cards[first].matchId === cards[second].matchId) {
         playSound("correct");
-        setSolved((prev) => [...prev, newFlipped[0], newFlipped[1]]);
+        setSolved((prev) => [...prev, first, second]);
+        setScore((s) => s + 200);
+        setEnergy((prev) => Math.min(100, prev + 10));
         setFlipped([]);
-        setScore((s) => s + 20);
         setStatus("playing");
       } else {
         playSound("wrong");
         setTimeout(() => {
           setFlipped([]);
           setStatus("playing");
-        }, 1000);
+        }, 800);
       }
     }
   };
 
   useEffect(() => {
-    if (cards.length > 0 && solved.length === cards.length) {
+    if (
+      cards.length > 0 &&
+      solved.length === cards.length &&
+      status !== "loading"
+    ) {
+      clearInterval(timerRef.current);
       playSound("win");
       setIsModalOpen(true);
     }
-  }, [solved, cards]);
+  }, [solved, cards, status]);
 
-  const handleNext = () => {
-    setIsModalOpen(false);
-    setLevel((l) => l + 1);
+  // القدرات الخارقة
+  const useScan = () => {
+    if (powers.scan > 0 && status === "playing") {
+      setPowers((p) => ({ ...p, scan: p.scan - 1 }));
+      const currentFlipped = [...flipped];
+      setFlipped(cards.map((_, i) => i));
+      setTimeout(() => setFlipped(currentFlipped), 1000);
+    }
   };
 
+  const useFreeze = () => {
+    if (powers.freeze > 0 && !isTimeFrozen) {
+      setPowers((p) => ({ ...p, freeze: p.freeze - 1 }));
+      setIsTimeFrozen(true);
+      setTimeout(() => setIsTimeFrozen(false), 5000);
+    }
+  };
+
+  if (isShopOpen)
+    return (
+      <ShopView
+        score={score}
+        setScore={setScore}
+        setPowers={setPowers}
+        close={() => setIsShopOpen(false)}
+      />
+    );
+
+  const currentTheme = WORLDS[stage];
+
   return (
-    <>
+    <div
+      className={`min-h-screen bg-[#020202] text-white p-6 flex flex-col items-center font-black ${
+        isTimeFrozen ? "shadow-[inset_0_0_100px_rgba(0,255,255,0.15)]" : ""
+      }`}
+    >
       <Helmet>
-        <title>Memory AI | Brain Training | MINDLAB</title>
-        <meta
-          name="description"
-          content={`Match pairs and train memory. Stage: ${stage}`}
-        />
+        <title>NEURAL SYNC | {currentTheme.name}</title>
       </Helmet>
 
-      <div className="min-h-screen bg-[#050505] text-white p-8 flex flex-col items-center font-sans">
-        {/* Stage Selector */}
-        <div className="mb-10 flex flex-col items-center gap-4">
-          <h1 className="text-[10px] tracking-[5px] text-zinc-500 font-black uppercase">
-            Educational Path
-          </h1>
-          <div className="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5">
-            {["PRIMARY", "MIDDLE", "SECONDARY"].map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setStage(s);
-                  setLevel(1);
-                  setScore(0);
-                }}
-                className={`px-6 py-2 rounded-xl text-xs font-black ${
-                  stage === s ? "bg-purple-600 scale-105" : "text-zinc-500"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
+      {/* Header HUD */}
+      <div className="w-full max-w-4xl flex justify-between items-center mb-8 bg-zinc-900/40 p-4 rounded-3xl border border-white/5 backdrop-blur-md">
+        <div className="px-4">
+          <div className="text-[8px] text-zinc-500 tracking-widest mb-1">
+            CORE ENERGY
+          </div>
+          <div className="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden">
+            <motion.div
+              animate={{ width: `${energy}%` }}
+              className={`h-full ${
+                isTimeFrozen ? "bg-cyan-400" : "bg-red-500"
+              }`}
+            />
           </div>
         </div>
+        <button
+          onClick={() => setIsShopOpen(true)}
+          className="text-amber-400 bg-amber-500/10 px-6 py-2 rounded-2xl border border-amber-500/20 hover:bg-amber-500/20 transition-all font-mono"
+        >
+          {score} XP 🛒
+        </button>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-10 bg-zinc-900/30 px-12 py-6 rounded-3xl mb-12">
-          <Stat label="LEVEL" value={level} color="text-purple-400" />
-          <Stat label="SCORE" value={score} color="text-green-400" />
-          <Stat label="STAGE" value={stage[0]} color="text-yellow-500" />
-        </div>
-
-        {/* Memory Grid */}
-        <div className="flex-1 flex items-center justify-center w-full max-w-4xl">
+      {/* المصفوفة - تظهر فقط عند انتهاء التحميل */}
+      <div className="flex-1 flex items-center justify-center w-full">
+        <AnimatePresence mode="wait">
           {status === "loading" ? (
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-zinc-500">GENERATING AI PAIRS...</p>
-            </div>
+            <motion.div
+              key="loader"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-zinc-700 tracking-[0.5em] text-[10px]"
+            >
+              INITIALIZING GRID...
+            </motion.div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <motion.div
+              key="grid"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`grid gap-4 ${
+                cards.length > 12
+                  ? "grid-cols-4 sm:grid-cols-6"
+                  : "grid-cols-3 sm:grid-cols-4"
+              }`}
+            >
               {cards.map((card, idx) => (
-                <motion.div
-                  key={card.id}
-                  className="relative w-24 h-36 cursor-pointer"
+                <Card
+                  key={card.id || idx}
+                  content={card.content}
+                  isFlipped={flipped.includes(idx) || solved.includes(idx)}
+                  isSolved={solved.includes(idx)}
                   onClick={() => handleCardClick(idx)}
-                  style={{ perspective: "1000px" }}
-                >
-                  <motion.div
-                    className="w-full h-full relative"
-                    style={{ transformStyle: "preserve-3d" }}
-                    animate={{
-                      rotateY:
-                        flipped.includes(idx) || solved.includes(idx) ? 180 : 0,
-                    }}
-                  >
-                    {/* Back: مركبة فضائية 🛸 */}
-                    <div className="absolute inset-0 bg-[#0f0f0f] rounded-2xl flex items-center justify-center text-3xl font-bold text-cyan-400 shadow-[0_0_20px_cyan]">
-                      🛸
-                    </div>
-
-                    {/* Front */}
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center rounded-2xl font-bold text-2xl shadow-[0_0_20px_cyan] ${
-                        solved.includes(idx)
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-[#1a0f3f] text-pink-400"
-                      }`}
-                      style={{
-                        transform: "rotateY(180deg)",
-                        backfaceVisibility: "hidden",
-                      }}
-                    >
-                      {card.content}
-                    </div>
-                  </motion.div>
-                </motion.div>
+                  theme={currentTheme}
+                />
               ))}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </div>
 
-        {/* Footer */}
-        <div className="mt-10 text-xs text-zinc-500">
-          {status === "playing" ? "Find pairs" : "Checking..."}
-        </div>
-
-        {/* Result Modal */}
-        <ResultModal
-          isOpen={isModalOpen}
-          status="win"
-          score={score}
-          time="N/A"
-          onRestart={() => {
-            setIsModalOpen(false);
-            loadGame();
-          }}
-          nextLevel={handleNext}
+      {/* Power-ups */}
+      <div className="flex gap-8 mt-10">
+        <PowerButton
+          icon="🧊"
+          count={powers.freeze}
+          active={isTimeFrozen}
+          onClick={useFreeze}
+          color="border-cyan-500"
+        />
+        <PowerButton
+          icon="📡"
+          count={powers.scan}
+          onClick={useScan}
+          color="border-purple-500"
         />
       </div>
-    </>
+
+      <ResultModal
+        isOpen={isModalOpen}
+        status={energy > 0 ? "win" : "lose"}
+        score={score}
+        onRestart={() => {
+          setIsModalOpen(false);
+          loadGame();
+        }}
+        nextLevel={() => {
+          setLevel((l) => l + 1);
+          setIsModalOpen(false);
+        }}
+      />
+    </div>
   );
 }
 
-function Stat({ label, value, color }) {
+// مكون البطاقة (Card)
+function Card({ content, isFlipped, isSolved, onClick, theme }) {
   return (
-    <div className="flex flex-col items-center">
-      <span className="text-xs text-zinc-500">{label}</span>
-      <span className={`text-2xl font-bold ${color}`}>{value}</span>
+    <div
+      onClick={onClick}
+      className="relative w-20 h-28 sm:w-24 sm:h-32 cursor-pointer transition-transform hover:scale-105 active:scale-95"
+      style={{ perspective: "1000px" }}
+    >
+      <motion.div
+        className="w-full h-full relative"
+        style={{ transformStyle: "preserve-3d" }}
+        animate={{ rotateY: isFlipped ? 180 : 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      >
+        {/* الخلف */}
+        <div
+          className={`absolute inset-0 bg-[#0a0a0a] rounded-2xl border ${theme.border} ${theme.glow} flex items-center justify-center`}
+        >
+          <span className="text-2xl opacity-10">🧠</span>
+        </div>
+        {/* الوجه */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center rounded-2xl font-black text-3xl ${
+            isSolved
+              ? "bg-white text-black"
+              : `bg-zinc-900 border-2 ${theme.border} ${theme.color}`
+          }`}
+          style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}
+        >
+          {content}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function PowerButton({ icon, count, active, onClick, color }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-14 h-14 rounded-2xl border-2 bg-zinc-900 flex items-center justify-center text-xl transition-all ${color} ${
+        active ? "animate-pulse scale-110 shadow-lg" : "opacity-60"
+      } ${count === 0 ? "grayscale opacity-20" : ""}`}
+    >
+      {icon}
+      <span className="absolute -top-2 -right-2 bg-white text-black text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-black font-bold">
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function ShopView({ score, setScore, setPowers, close }) {
+  const buy = (type, price) => {
+    if (score >= price) {
+      setScore((s) => s - price);
+      setPowers((p) => ({ ...p, [type]: p[type] + 1 }));
+      playSound("correct");
+    }
+  };
+  return (
+    <div className="h-screen bg-black flex flex-col items-center justify-center p-8">
+      <h2 className="text-amber-500 tracking-[0.5em] mb-12 text-xs font-black uppercase">
+        Neural Shop
+      </h2>
+      <div className="grid gap-4 w-full max-w-sm">
+        <button
+          onClick={() => buy("freeze", 500)}
+          className="bg-zinc-900/50 p-6 rounded-3xl border border-white/5 flex justify-between items-center hover:border-cyan-500/40 transition-all"
+        >
+          <div className="text-left font-black text-cyan-400 text-xs">
+            FREEZE 🧊
+          </div>
+          <div className="text-amber-400 text-xs">500 XP</div>
+        </button>
+        <button
+          onClick={() => buy("scan", 800)}
+          className="bg-zinc-900/50 p-6 rounded-3xl border border-white/5 flex justify-between items-center hover:border-purple-500/40 transition-all"
+        >
+          <div className="text-left font-black text-purple-400 text-xs">
+            SCAN 📡
+          </div>
+          <div className="text-amber-400 text-xs">800 XP</div>
+        </button>
+      </div>
+      <button
+        onClick={close}
+        className="mt-16 text-zinc-600 text-[10px] tracking-widest hover:text-white uppercase"
+      >
+        Back to Mission
+      </button>
     </div>
   );
 }
