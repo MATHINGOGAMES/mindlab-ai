@@ -10,32 +10,29 @@
     <lastmod>2026-03-31</lastmod>
     <priority>0.8</priority>
   </url>
-
   <url>
     <loc>https://mindlab-ai.vercel.app/games/word-catcher</loc>
     <lastmod>2026-03-31</lastmod>
     <priority>0.8</priority>
   </url>
-<url>
-    <loc>https://mindlab-ai.vercel.app/game/neuralGrid</loc>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/games/neuralGrid</loc>
     <lastmod>2026-03-31</lastmod>
     <priority>0.8</priority>
   </url>
-<url>
-    <loc>https://mindlab-ai.vercel.app/game/memory</loc>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/games/memory</loc>
     <lastmod>2026-03-31</lastmod>
     <priority>0.8</priority>
   </url>
-
-<url>
-    <loc>https://mindlab-ai.vercel.app/game/geometry</loc>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/games/geometry</loc>
     <lastmod>2026-03-31</lastmod>
     <priority>0.8</priority>
   </url>
-<url>
-    <loc>https://mindlab-ai.vercel.app/game/NeonMathAdvancedPro</loc>
+  <url>
+    <loc>https://mindlab-ai.vercel.app/games/NeonMathAdvancedPro</loc>
     <lastmod>2026-03-31</lastmod>
     <priority>0.8</priority>
   </url>
-
 </urlset>
