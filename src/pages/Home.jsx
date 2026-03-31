@@ -5,6 +5,13 @@ export default function Home() {
   // 🎮 Game Roster (Updated with Geometry Lab)
   const games = [
     {
+      name: "Word Catcher",
+      path: "/game/WordCatcher",
+      emoji: "🧩",
+      color: "from-green-400 to-blue-500",
+      desc: "The classic challenge of numbers and logic.",
+    },
+    {
       name: "Sudoku Master",
       path: "/game/sudoku",
       emoji: "🧩",

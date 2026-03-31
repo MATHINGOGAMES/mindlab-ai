@@ -5,7 +5,7 @@ import MemoryAI from "../games/memory/MemoryAI";
 import GeometryMemory from "../games/geometry/GeometryMemory"; // 👈 Import the new Geometry game
 import NeonMathAdvancedPro from "../games/NeonMathAdvancedPro/NeonMathAdvancedPro";
 import { motion } from "framer-motion";
-
+import WordCatcher from "../games/WordCatcher/WordCatcher";
 export default function Game() {
   const { type } = useParams();
 
@@ -16,6 +16,7 @@ export default function Game() {
     memory: <MemoryAI />,
     geometry: <GeometryMemory />, // 👈 Link the new isolated Geometry module
     NeonMathAdvancedPro: <NeonMathAdvancedPro />,
+    WordCatcher: <WordCatcher />,
   };
 
   const currentGame = gamesMap[type];

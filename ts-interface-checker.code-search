@@ -1,0 +1,14 @@
+# Query: ts-interface-checker
+
+9 results - 2 files
+
+package-lock.json:
+  32:         "ts-interface-checker": "^1.0.2",
+  4446:         "ts-interface-checker": "^0.1.9"
+  4456:     "node_modules/sucrase/node_modules/ts-interface-checker": {
+  4458:       "resolved": "https://registry.npmjs.org/ts-interface-checker/-/ts-interface-checker-0.1.13.tgz",
+  4657:     "node_modules/ts-interface-checker": {
+  4659:       "resolved": "https://registry.npmjs.org/ts-interface-checker/-/ts-interface-checker-1.0.2.tgz",
+
+package.json:
+  37:     "ts-interface-checker": "^1.0.2",
