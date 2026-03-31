@@ -7,7 +7,7 @@ export default function Home() {
     {
       name: "Word Catcher",
       path: "/game/WordCatcher",
-      emoji: "🧩",
+      emoji: "🎯",
       color: "from-green-400 to-blue-500",
       desc: "The classic challenge of numbers and logic.",
     },
@@ -42,7 +42,7 @@ export default function Home() {
     {
       name: "Math Advance",
       path: "/game/NeonMathAdvancedPro",
-      emoji: "📐",
+      emoji: "⚡",
       color: "from-green-500 to-red-600",
       desc: "Bridge visual shapes with geometric laws.",
     },
