@@ -8,7 +8,7 @@ import {
 import { motion } from "framer-motion";
 
 // استيراد الصفحات - تأكد من مطابقة أسماء الملفات في مجلد pages
-import Dashboard from "./pages/dashboard";
+import Dashboard from "./pages/Dashboard";
 import Game from "./pages/Game";
 import Home from "./pages/Home"; // اختياري إذا أردت الاحتفاظ بها بمسار مختلف
 
