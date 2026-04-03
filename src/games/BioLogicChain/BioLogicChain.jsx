@@ -29,19 +29,20 @@ const ATOMIC_MISSIONS = [
 export default function AtomicLab() {
   const { addXP, rank, level: globalLevel } = useGameStore();
   const [missionIdx, setMissionIdx] = useState(0);
-  const [core, setCore] = useState([]); // النواة (Protons & Neutrons)
-  const [orbit, setOrbit] = useState([]); // المدار (Electrons)
+  const [core, setCore] = useState([]);
+  const [orbit, setOrbit] = useState([]);
   const [options, setOptions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReactionComplete, setIsReactionComplete] = useState(false); // حالة جديدة للتحقق
 
   const current = ATOMIC_MISSIONS[missionIdx];
 
   const initAtom = useCallback(() => {
-    // خلط المكونات
     const allParts = [...current.parts].sort(() => Math.random() - 0.5);
     setOptions(allParts);
     setCore([]);
     setOrbit([]);
+    setIsReactionComplete(false); // إعادة تصفير الحالة
   }, [current]);
 
   useEffect(() => {
@@ -49,9 +50,9 @@ export default function AtomicLab() {
   }, [initAtom]);
 
   const handlePartClick = (part, index) => {
+    if (isReactionComplete) return; // منع الضغط بعد الاكتمال
     playSound("click");
 
-    // تصنيف المكون لغرض الرسم البصري
     if (part.includes("Electron")) {
       setOrbit((prev) => [...prev, part]);
     } else {
@@ -63,13 +64,12 @@ export default function AtomicLab() {
     setOptions(newOptions);
 
     if (newOptions.length === 0) {
-      setTimeout(checkAtomicLogic, 800);
+      setIsReactionComplete(true);
+      playSound("correct");
     }
   };
 
-  const checkAtomicLogic = () => {
-    // في هذا المستوى، نتحقق فقط من اكتمال التجميع
-    playSound("correct");
+  const handleNextElement = () => {
     addXP(current.xp);
     if (missionIdx < ATOMIC_MISSIONS.length - 1) {
       setMissionIdx((prev) => prev + 1);
@@ -81,13 +81,13 @@ export default function AtomicLab() {
   return (
     <div className="min-h-screen bg-[#050505] text-white p-4 flex flex-col items-center font-mono overflow-hidden">
       <Helmet>
-        <title>Atomic Lab | Periodic Table English</title>
+        <title>Atomic Lab | MindLab Pro AI</title>
       </Helmet>
 
       {/* --- Nuclear Dashboard --- */}
       <div className="w-full max-w-md bg-zinc-900/50 border border-cyan-500/30 rounded-[2rem] p-6 mb-8 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
         <div className="flex justify-between items-center">
-          <div className="h-10 w-10 border-2 border-cyan-500 rounded-lg flex items-center justify-center text-cyan-500 font-black text-xl">
+          <div className="h-10 w-10 border-2 border-cyan-500 rounded-lg flex items-center justify-center text-cyan-500 font-black text-xl animate-pulse">
             {current.element[0]}
           </div>
           <div className="text-right">
@@ -103,15 +103,24 @@ export default function AtomicLab() {
 
       {/* --- The Atom Visualizer --- */}
       <div className="relative w-80 h-80 mb-12 flex items-center justify-center">
-        {/* Orbits (Visual) */}
-        <div className="absolute w-72 h-72 border border-white/5 rounded-full animate-[spin_10s_linear_infinite]" />
-        <div className="absolute w-56 h-56 border border-white/10 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+        <div
+          className={`absolute w-72 h-72 border ${
+            isReactionComplete ? "border-cyan-500" : "border-white/5"
+          } rounded-full animate-[spin_10s_linear_infinite] transition-colors`}
+        />
 
-        {/* Core (Nucleus) */}
         <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
+          animate={
+            isReactionComplete
+              ? { scale: [1, 1.2, 1], rotate: 360 }
+              : { scale: [1, 1.05, 1] }
+          }
           transition={{ duration: 2, repeat: Infinity }}
-          className="w-24 h-24 bg-cyan-500/10 border-2 border-cyan-500/40 rounded-full flex flex-wrap gap-1 items-center justify-center p-2 shadow-[0_0_50px_rgba(6,182,212,0.2)]"
+          className={`w-24 h-24 ${
+            isReactionComplete
+              ? "bg-cyan-500/30 shadow-[0_0_80px_rgba(6,182,212,0.6)]"
+              : "bg-cyan-500/10"
+          } border-2 border-cyan-500/40 rounded-full flex flex-wrap gap-1 items-center justify-center p-2 transition-all`}
         >
           {core.map((p, i) => (
             <div
@@ -125,7 +134,6 @@ export default function AtomicLab() {
           ))}
         </motion.div>
 
-        {/* Orbiting Electrons */}
         {orbit.map((_, i) => (
           <motion.div
             key={i}
@@ -138,51 +146,57 @@ export default function AtomicLab() {
         ))}
       </div>
 
-      {/* --- Mission Text --- */}
-      <div className="text-center mb-10">
-        <h3 className="text-cyan-400 font-black text-lg tracking-widest uppercase mb-2">
-          {current.task}
-        </h3>
-        <p className="text-zinc-500 text-[11px] max-w-xs mx-auto italic leading-relaxed">
-          {current.fact}
-        </p>
+      {/* --- Action Center: زر المتابعة الجديد --- */}
+      <div className="h-24 mb-6 text-center">
+        {!isReactionComplete ? (
+          <div className="space-y-2">
+            <h3 className="text-cyan-400 font-black text-lg tracking-widest uppercase">
+              {current.task}
+            </h3>
+            <p className="text-zinc-500 text-[11px] italic">{current.fact}</p>
+          </div>
+        ) : (
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            onClick={handleNextElement}
+            className="px-12 py-4 bg-cyan-500 text-black font-black rounded-full shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:scale-110 transition-transform uppercase tracking-tighter"
+          >
+            Synthesize Next Element →
+          </motion.button>
+        )}
       </div>
 
-      {/* --- Particle Selection (English Terms) --- */}
+      {/* --- Particle Selection --- */}
       <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
-        {options.map((part, i) => (
-          <motion.button
-            key={i}
-            whileHover={{ x: 10, backgroundColor: "rgba(6, 182, 212, 0.1)" }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handlePartClick(part, i)}
-            className="p-4 bg-zinc-900 border border-white/5 rounded-2xl flex justify-between items-center group transition-all"
-          >
-            <span className="font-black text-zinc-400 group-hover:text-cyan-400 tracking-tighter">
-              {part}
-            </span>
-            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
-          </motion.button>
-        ))}
+        <AnimatePresence>
+          {!isReactionComplete &&
+            options.map((part, i) => (
+              <motion.button
+                key={part}
+                exit={{ opacity: 0, x: -20 }}
+                whileHover={{
+                  x: 10,
+                  backgroundColor: "rgba(6, 182, 212, 0.1)",
+                }}
+                onClick={() => handlePartClick(part, i)}
+                className="p-4 bg-zinc-900 border border-white/5 rounded-2xl flex justify-between items-center group transition-all"
+              >
+                <span className="font-black text-zinc-400 group-hover:text-cyan-400 tracking-tighter">
+                  {part}
+                </span>
+                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
+              </motion.button>
+            ))}
+        </AnimatePresence>
       </div>
 
       <ResultModal
         isOpen={isModalOpen}
         status="win"
-        score={current.xp}
-        victoryMessage="Molly says: You are not just learning English; you are understanding the building blocks of the Universe."
+        score={350}
         onRestart={() => window.location.reload()}
       />
-
-      {/* --- Atomic SEO Footer --- */}
-      <footer className="w-full max-w-3xl mt-20 border-t border-white/5 pt-8 pb-10 opacity-50">
-        <p className="text-[10px] text-zinc-500 text-center leading-relaxed">
-          <strong>Academic English Integration:</strong> Periodic Table Literacy
-          for kids. Mastering terms like <em>Proton</em>, <em>Neutron</em>, and{" "}
-          <em>Electron</em> within an immersive AI environment designed for the{" "}
-          <strong>MindLab Pro</strong> ecosystem.
-        </p>
-      </footer>
     </div>
   );
 }

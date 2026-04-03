@@ -29,7 +29,6 @@ const MOLLY_MESSAGES = [
 ];
 
 export default function SentenceArchitect() {
-  // --- ربط نظام الداش بورد (MindLab Core) ---
   const { addXP, rank, level: globalLevel } = useGameStore();
 
   const [currentMission, setCurrentMission] = useState(0);
@@ -38,12 +37,14 @@ export default function SentenceArchitect() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [victoryMsg, setVictoryMsg] = useState("");
   const [score, setScore] = useState(0);
+  const [isCorrect, setIsCorrect] = useState(false); // حالة جديدة للتحقق من صحة الجملة
 
   const initMission = useCallback((index) => {
     const words = [...MISSIONS[index].words].sort(() => Math.random() - 0.5);
     setShuffledWords(words);
     setUserSentence([]);
     setVictoryMsg("");
+    setIsCorrect(false); // إعادة تصفير حالة الإجابة
   }, []);
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function SentenceArchitect() {
   }, [currentMission, initMission]);
 
   const handleWordClick = (word, index) => {
+    if (isCorrect) return; // منع الضغط إذا كانت الإجابة صحيحة بالفعل
     playSound("click");
     const newAnswer = [...userSentence, word];
     setUserSentence(newAnswer);
@@ -65,30 +67,43 @@ export default function SentenceArchitect() {
   };
 
   const checkResult = (finalAnswer) => {
-    const isCorrect =
-      finalAnswer.join(" ") === MISSIONS[currentMission].correct;
+    const correctStr = MISSIONS[currentMission].correct;
+    const userStr = finalAnswer.join(" ");
 
-    if (isCorrect) {
+    if (userStr === correctStr) {
       playSound("correct");
+      setIsCorrect(true); // تفعيل حالة الإجابة الصحيحة لإظهار زر المتابعة
       const xpGained = MISSIONS[currentMission].xp;
       addXP(xpGained);
       setScore((prev) => prev + xpGained);
 
-      if (currentMission < MISSIONS.length - 1) {
-        setTimeout(() => setCurrentMission((prev) => prev + 1), 800);
-      } else {
+      // إذا كانت هذه آخر مهمة، أظهر المودال النهائي
+      if (currentMission === MISSIONS.length - 1) {
         setVictoryMsg(
           MOLLY_MESSAGES[Math.floor(Math.random() * MOLLY_MESSAGES.length)]
         );
-        setIsModalOpen(true);
+        setTimeout(() => setIsModalOpen(true), 1000);
       }
     } else {
       playSound("wrong");
-      setIsModalOpen(true);
+      setTimeout(() => {
+        // إعادة الكلمات للمسبح إذا كانت خاطئة ليعيد المحاولة
+        setShuffledWords(
+          [...MISSIONS[currentMission].words].sort(() => Math.random() - 0.5)
+        );
+        setUserSentence([]);
+      }, 1000);
+    }
+  };
+
+  const handleNextMission = () => {
+    if (currentMission < MISSIONS.length - 1) {
+      setCurrentMission((prev) => prev + 1);
     }
   };
 
   const handleUndo = (word, index) => {
+    if (isCorrect) return;
     const newAnswer = [...userSentence];
     newAnswer.splice(index, 1);
     setUserSentence(newAnswer);
@@ -100,13 +115,9 @@ export default function SentenceArchitect() {
     <div className="min-h-screen bg-[#050505] text-white p-4 flex flex-col items-center font-mono selection:bg-purple-500/30">
       <Helmet>
         <title>Sentence Architect | MindLab Pro AI</title>
-        <meta
-          name="description"
-          content="Build English sentences and improve your grammar with Molly's AI guidance."
-        />
       </Helmet>
 
-      {/* --- Unified Dashboard (HUD) --- */}
+      {/* --- HUD Header --- */}
       <div className="w-full max-w-md bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-5 mb-8 shadow-2xl">
         <div className="flex justify-between items-start">
           <div>
@@ -125,42 +136,27 @@ export default function SentenceArchitect() {
             <p className="text-2xl font-black text-purple-400">{score}</p>
           </div>
         </div>
-        <div className="mt-3 h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${(currentMission / MISSIONS.length) * 100}%` }}
-            className="h-full bg-purple-500 shadow-[0_0_10px_#a855f7]"
-          />
-        </div>
       </div>
 
-      <p className="text-[10px] text-zinc-500 tracking-widest mb-4 uppercase">
-        Mission_{currentMission + 1}_of_{MISSIONS.length}
-      </p>
-
-      {/* --- Bridge Area (The Construction Site) --- */}
-      <div className="w-full max-w-2xl min-h-[140px] p-8 bg-zinc-900/20 border-2 border-dashed border-purple-500/10 rounded-[3rem] flex flex-wrap gap-3 justify-center items-center mb-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#a855f7_0%,_transparent_70%)] opacity-[0.03] pointer-events-none" />
-
+      {/* --- Construction Site --- */}
+      <div
+        className={`w-full max-w-2xl min-h-[140px] p-8 bg-zinc-900/20 border-2 border-dashed ${
+          isCorrect ? "border-green-500/50" : "border-purple-500/10"
+        } rounded-[3rem] flex flex-wrap gap-3 justify-center items-center mb-8 relative transition-all`}
+      >
         <AnimatePresence>
-          {userSentence.length === 0 && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-zinc-700 text-sm italic"
-            >
-              Tap words below to start building...
-            </motion.p>
-          )}
           {userSentence.map((word, i) => (
             <motion.span
               layout
-              initial={{ scale: 0, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0, opacity: 0 }}
-              key={`ans-${i}-${word}`}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              key={`ans-${i}`}
               onClick={() => handleUndo(word, i)}
-              className="px-5 py-3 bg-purple-600/10 border border-purple-500/30 rounded-2xl text-purple-100 cursor-pointer hover:bg-red-500/10 hover:border-red-500/30 transition-colors shadow-lg"
+              className={`px-5 py-3 ${
+                isCorrect
+                  ? "bg-green-500/20 border-green-500/40"
+                  : "bg-purple-600/10 border-purple-500/30"
+              } border rounded-2xl text-purple-100 cursor-pointer shadow-lg`}
             >
               {word}
             </motion.span>
@@ -168,123 +164,49 @@ export default function SentenceArchitect() {
         </AnimatePresence>
       </div>
 
+      {/* --- Action Area (الزر الجديد للمتابعة) --- */}
+      <div className="h-20 mb-8">
+        {isCorrect && currentMission < MISSIONS.length - 1 && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={handleNextMission}
+            className="px-10 py-4 bg-green-500 text-black font-black rounded-full shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:scale-105 transition-transform"
+          >
+            CONTINUE TO NEXT MISSION →
+          </motion.button>
+        )}
+      </div>
+
       {/* --- Words Pool --- */}
-      <div className="flex flex-wrap gap-4 justify-center max-w-xl">
-        <AnimatePresence>
+      {!isCorrect && (
+        <div className="flex flex-wrap gap-4 justify-center max-w-xl">
           {shuffledWords.map((word, i) => (
             <motion.button
               layout
-              whileHover={{ scale: 1.05, translateY: -2 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              key={`word-${i}-${word}`}
+              whileHover={{ scale: 1.05 }}
+              key={`word-${i}`}
               onClick={() => handleWordClick(word, i)}
               className="px-7 py-4 bg-zinc-900 border border-white/5 rounded-[1.5rem] font-bold text-zinc-200 shadow-xl hover:border-purple-500/50 transition-all"
             >
               {word}
             </motion.button>
           ))}
-        </AnimatePresence>
-      </div>
+        </div>
+      )}
 
-      {/* --- Result Modal & Molly's Legacy --- */}
+      {/* --- Modals & Footer (تبقى كما هي) --- */}
       <ResultModal
         isOpen={isModalOpen}
         status={victoryMsg ? "win" : "lose"}
         score={score}
         onRestart={() => window.location.reload()}
-        nextLevel={() => {
-          setIsModalOpen(false);
-          if (!victoryMsg) initMission(currentMission);
-        }}
+        nextLevel={() => setIsModalOpen(false)}
       >
         {victoryMsg && (
-          <div className="mt-6 p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
-            <p className="text-purple-400 font-bold text-[10px] tracking-[0.3em] mb-2 uppercase text-center">
-              Molly's Wisdom
-            </p>
-            <p className="text-cyan-100 italic text-sm text-center leading-relaxed">
-              "{victoryMsg}"
-            </p>
-          </div>
+          <p className="text-cyan-100 text-center italic">"{victoryMsg}"</p>
         )}
       </ResultModal>
-      {/* --- SEO OPTIMIZED & HIGH-CTR DESCRIPTION --- */}
-      <footer className="w-full max-w-3xl mt-20 border-t border-white/5 pt-10 pb-20 px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Column 1: High-SEO Educational Content */}
-          <div className="space-y-4">
-            <h3 className="text-purple-400 font-black text-lg tracking-tighter uppercase">
-              Sentence Architect – The Best English Grammar Game for Kids
-            </h3>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              <strong className="text-zinc-200">Sentence Architect</strong> is
-              one of the most engaging
-              <span className="text-purple-500">
-                {" "}
-                English learning games for kids{" "}
-              </span>{" "}
-              designed to improve sentence building, grammar skills, and
-              vocabulary in a fun and interactive way. Perfect for{" "}
-              <strong>primary school students</strong>, this game uses proven
-              <strong> gamification learning techniques </strong> to turn
-              education into an exciting experience.
-            </p>
-            <ul className="text-zinc-500 text-xs space-y-2">
-              <li>• Learn English sentence structure step by step.</li>
-              <li>• Improve word order and grammar accuracy fast.</li>
-              <li>• Boost vocabulary and language confidence.</li>
-              <li>• Brain training through logic and quick thinking.</li>
-            </ul>
-          </div>
-
-          {/* Column 2: Emotional + Trust + Tech SEO */}
-          <div className="space-y-4">
-            <h3 className="text-cyan-400 font-black text-lg tracking-tighter uppercase">
-              Why Kids Love Sentence Architect
-            </h3>
-            <p className="text-zinc-400 text-sm leading-relaxed italic">
-              "Learning English has never been this fun!" Inspired by the vision
-              of <span className="text-cyan-500">Molly Stone</span>, this game
-              helps children become confident sentence builders while enjoying
-              every step of the journey.
-            </p>
-            <div className="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-              <p className="text-[10px] text-zinc-500 leading-tight">
-                <strong>Smart Learning System:</strong> Powered by
-                <span className="text-purple-400"> MindLab Pro AI</span>, the
-                game tracks progress using XP points, levels, and rewards —
-                making it one of the most effective
-                <strong> educational apps for kids </strong> available today.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* HIGH-SEO TAGS */}
-        <div className="mt-10 flex flex-wrap gap-2 opacity-40">
-          {[
-            "English Grammar Game for Kids",
-            "Learn English Sentence Building",
-            "Best Educational Games for Children",
-            "Interactive English Learning App",
-            "Grammar Practice for Primary Students",
-            "Sentence Builder Game Online",
-            "Kids Learning Games English",
-            "Gamified Education App",
-            "Brain Training for Kids",
-            "Fun English Learning Activities",
-          ].map((tag) => (
-            <span
-              key={tag}
-              className="text-[9px] border border-zinc-700 px-2 py-1 rounded-md text-zinc-500"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
-      </footer>
     </div>
   );
 }
