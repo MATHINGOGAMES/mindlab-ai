@@ -4,14 +4,24 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playSound } from "../../core/sounds";
 import { useGameEngine } from "../../core/game-engine";
+import { Helmet } from "react-helmet-async";
 import ResultModal from "../../components/shared/ResultModal";
 
-// تعريف العوالم لزيادة الحماس
 const WORLDS = [
-  { name: "NEON JUNGLE", color: "from-green-500", bg: "bg-green-950/10" },
-  { name: "CYBER CITY", color: "from-blue-500", bg: "bg-blue-950/10" },
-  { name: "SILICON VALLEY", color: "from-purple-500", bg: "bg-purple-950/10" },
-  { name: "CORE SERVER", color: "from-red-500", bg: "bg-red-950/10" },
+  {
+    id: 1,
+    name: "NEON JUNGLE",
+    color: "from-green-500",
+    text: "text-green-500",
+  },
+  { id: 2, name: "CYBER CITY", color: "from-blue-500", text: "text-blue-500" },
+  {
+    id: 3,
+    name: "SILICON VALLEY",
+    color: "from-purple-500",
+    text: "text-purple-500",
+  },
+  { id: 4, name: "CORE SERVER", color: "from-red-500", text: "text-red-500" },
 ];
 
 export default function NeonMathAdvancedPro() {
@@ -22,24 +32,16 @@ export default function NeonMathAdvancedPro() {
   const [isBossLevel, setIsBossLevel] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // منطق تتبع التقدم والخرائط
   useEffect(() => {
-    const progress = profile.streak % 10;
+    const streakMod = profile.streak % 10;
+    setIsBossLevel(streakMod === 9);
 
-    // التنبيه بمستوى الزعيم
-    if (progress === 9) {
-      setIsBossLevel(true);
-    } else {
-      setIsBossLevel(false);
-    }
-
-    // عند إكمال 10 أسئلة، أظهر الخريطة وانتقل للعالم التالي
     if (profile.streak > 0 && profile.streak % 10 === 0 && !showMap) {
       setShowMap(true);
       setTimeout(() => {
         setShowMap(false);
         setCurrentWorldIdx((prev) => (prev + 1) % WORLDS.length);
-      }, 3000); // تظهر الخريطة لمدة 3 ثوانٍ
+      }, 3000);
     }
   }, [profile.streak]);
 
@@ -55,144 +57,122 @@ export default function NeonMathAdvancedPro() {
 
   const currentWorld = WORLDS[currentWorldIdx];
 
-  // --- شاشة الخريطة (World Map Screen) ---
-  if (showMap) {
-    return (
-      <div className="h-screen bg-[#020202] flex flex-col items-center justify-center p-10">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="text-center"
-        >
-          <h2 className="text-zinc-500 font-black tracking-[0.5em] mb-8">
-            SECTOR CLEARED!
-          </h2>
-          <div className="flex gap-4 mb-12">
-            {WORLDS.map((w, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div
-                  className={`w-12 h-12 rounded-full border-2 ${
-                    i <= currentWorldIdx
-                      ? "border-cyan-400 bg-cyan-400/20"
-                      : "border-zinc-800 bg-zinc-900"
-                  } flex items-center justify-center`}
-                >
-                  {i < currentWorldIdx
-                    ? "✅"
-                    : i === currentWorldIdx
-                    ? "🚀"
-                    : i + 1}
-                </div>
-                <div
-                  className={`h-1 w-8 ${
-                    i < WORLDS.length - 1 ? "bg-zinc-800" : "hidden"
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
-          <h1
-            className={`text-5xl font-black italic bg-gradient-to-r ${
-              WORLDS[(currentWorldIdx + 1) % WORLDS.length].color
-            } to-white bg-clip-text text-transparent animate-pulse`}
-          >
-            NEXT: {WORLDS[(currentWorldIdx + 1) % WORLDS.length].name}
-          </h1>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // --- واجهة اللعب الأساسية ---
   return (
-    <div
-      className={`min-h-screen transition-all duration-1000 flex flex-col items-center justify-center p-6 ${
-        isBossLevel ? "bg-red-950/30" : currentWorld.bg
-      }`}
-    >
-      {/* HUD & Sector Info */}
-      <div className="w-full max-w-md mb-6 flex justify-between items-end">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">
-            World
-          </span>
-          <span
-            className={`text-lg font-black italic ${currentWorld.color.replace(
-              "from-",
-              "text-"
-            )}`}
-          >
+    <div className="min-h-screen bg-[#020202] flex flex-col items-center p-6 text-white font-mono">
+      <Helmet>
+        <title>Neon Math Advanced Pro | MindLab AI</title>
+      </Helmet>
+
+      {/* HEADER */}
+      <div className="w-full max-w-xl mb-10 flex justify-between border-b border-white/5 pb-4">
+        <div>
+          <p className="text-[9px] text-zinc-500 uppercase tracking-widest">
+            Current Sector
+          </p>
+          <h2 className={`text-2xl font-black ${currentWorld.text}`}>
             {currentWorld.name}
-          </span>
+          </h2>
         </div>
+
         <div className="text-right">
-          <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">
+          <p className="text-[9px] text-zinc-500 uppercase tracking-widest">
             Progress
-          </span>
-          <div className="text-xl font-black text-white">
-            {profile.streak % 10}/10
-          </div>
+          </p>
+          <p className="text-xl font-black">{profile.streak % 10}/10</p>
         </div>
       </div>
 
-      {/* Progress Line */}
-      <div className="w-full max-w-md h-1 bg-zinc-900 rounded-full mb-12 overflow-hidden border border-white/5">
-        <motion.div
-          animate={{ width: `${((profile.streak % 10) / 10) * 100}%` }}
-          className={`h-full ${
-            isBossLevel
-              ? "bg-red-500 shadow-[0_0_15px_red]"
-              : "bg-cyan-400 shadow-[0_0_10px_cyan]"
-          }`}
-        />
-      </div>
-
-      {/* Question Area */}
+      {/* QUESTION */}
       <AnimatePresence mode="wait">
         <motion.div
           key={question?.question}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className={`text-8xl font-black mb-16 tracking-tighter text-center ${
-            isBossLevel
-              ? "text-red-500 drop-shadow-[0_0_20px_red]"
-              : "text-white"
-          }`}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-[100px] font-black mb-12"
         >
-          {isBossLevel && (
-            <div className="text-xs tracking-[1em] mb-4 animate-bounce">
-              BOSS BATTLE
-            </div>
-          )}
           {question?.question}
         </motion.div>
       </AnimatePresence>
 
-      {/* Options Grid */}
-      <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+      {/* OPTIONS */}
+      <div className="grid grid-cols-2 gap-6 w-full max-w-xl">
         {question?.options.map((opt, i) => (
-          <motion.button
+          <button
             key={i}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.9 }}
             onClick={() => handleChoice(opt)}
-            className={`h-28 rounded-3xl text-4xl font-black border-2 transition-all ${
-              isBossLevel
-                ? "bg-red-500/10 border-red-500/30 hover:border-red-500"
-                : "bg-zinc-900/40 border-white/5 hover:border-cyan-500/50"
-            }`}
+            className="h-28 rounded-3xl text-4xl font-black bg-zinc-900 border border-white/5 hover:border-cyan-400"
           >
             {opt}
-          </motion.button>
+          </button>
         ))}
       </div>
 
-      {/* Stats Bottom Bar */}
-      <div className="mt-12 flex gap-8">
-        <StatItem label="LEVEL" value={profile.level} />
-        <StatItem label="TOTAL XP" value={profile.xp} />
-        <StatItem label="COMBO" value={`x${profile.streak}`} />
-      </div>
+      {/* ================= FOOTER ================= */}
+      <footer className="w-full max-w-5xl mt-24 border-t border-white/5 pt-12 pb-20 px-6 text-center relative overflow-hidden">
+        {/* Glow */}
+        <div className="absolute inset-0 opacity-20">
+          <div
+            className={`w-full h-full bg-gradient-to-r ${currentWorld.color} to-transparent blur-3xl animate-pulse`}
+          />
+        </div>
+
+        {/* Header */}
+        <h3
+          className={`text-xl font-black tracking-widest ${currentWorld.text}`}
+        >
+          NEURAL SYSTEM HUB
+        </h3>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-6 mt-8">
+          <Stat
+            label="PLAYERS"
+            value={Math.floor(1200 + Math.random() * 300)}
+          />
+          <Stat label="XP" value={profile.xp} />
+          <Stat
+            label="LOAD"
+            value={`${Math.floor(60 + Math.random() * 30)}%`}
+          />
+        </div>
+
+        {/* Description */}
+        <p className="text-zinc-400 text-sm mt-8 max-w-xl mx-auto">
+          Neon Math is an AI-powered brain training game designed to improve
+          speed, logic, and mental calculation through immersive gameplay.
+        </p>
+
+        {/* CTA */}
+        <div className="mt-10 flex justify-center gap-4">
+          <button
+            onClick={() => navigator.clipboard.writeText(window.location.href)}
+            className="px-4 py-2 bg-cyan-500 text-black rounded-xl text-xs font-black"
+          >
+            Share
+          </button>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-zinc-900 border border-white/5 rounded-xl text-xs"
+          >
+            Restart
+          </button>
+        </div>
+
+        {/* Status */}
+        <p
+          className={`mt-6 text-sm font-black ${
+            isBossLevel ? "text-red-500" : currentWorld.text
+          }`}
+        >
+          {isBossLevel ? "⚠ BOSS ACTIVE" : "SYSTEM STABLE"}
+        </p>
+
+        {/* Copyright */}
+        <p className="mt-10 text-[10px] text-zinc-700">
+          © {new Date().getFullYear()} MindLab AI
+        </p>
+      </footer>
 
       <ResultModal
         isOpen={isModalOpen}
@@ -204,13 +184,11 @@ export default function NeonMathAdvancedPro() {
   );
 }
 
-function StatItem({ label, value }) {
+function Stat({ label, value }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-[8px] font-bold text-zinc-600 tracking-widest">
-        {label}
-      </span>
-      <span className="text-lg font-black text-zinc-300">{value}</span>
+      <span className="text-[10px] text-zinc-500">{label}</span>
+      <span className="text-lg font-black">{value}</span>
     </div>
   );
 }

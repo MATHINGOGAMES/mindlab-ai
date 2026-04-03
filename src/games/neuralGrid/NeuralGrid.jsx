@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGameStore } from "../../core/store";
 import { playSound } from "../../core/sounds";
 import { generateAIGrid } from "../../ai/aiGridGenerator";
 import { Helmet } from "react-helmet-async";
 import ResultModal from "../../components/shared/ResultModal";
 
-export default function NeuralGrid() {
+export default function NeuralGridPro() {
+  const { addXP, rank, level: globalLevel } = useGameStore();
+
   const [level, setLevel] = useState(1);
   const [grid, setGrid] = useState([]);
   const [answer, setAnswer] = useState(null);
@@ -24,24 +27,26 @@ export default function NeuralGrid() {
   const timerRef = useRef(null);
   const startTimeRef = useRef(Date.now());
 
-  // --- Haptic Feedback ---
   const vibrate = (pattern) => {
     if (typeof window !== "undefined" && navigator.vibrate) {
       navigator.vibrate(pattern);
     }
   };
 
-  // --- Game Logic ---
   const nextChallenge = useCallback(async () => {
     setStatus("loading");
     setUserInput("");
-    const data = await generateAIGrid(level, 3, "GRID", "PRIMARY");
-    if (data?.displayGrid) {
-      setGrid(data.displayGrid);
-      setAnswer(data.answer);
-      setEnergy(100);
-      setStatus("playing");
-      startTimeRef.current = Date.now();
+    try {
+      const data = await generateAIGrid(level, 3, "GRID", "PRIMARY");
+      if (data?.displayGrid) {
+        setGrid(data.displayGrid);
+        setAnswer(data.answer);
+        setEnergy(100);
+        setStatus("playing");
+        startTimeRef.current = Date.now();
+      }
+    } catch (err) {
+      console.error("Neural Link Failed", err);
     }
   }, [level]);
 
@@ -51,307 +56,315 @@ export default function NeuralGrid() {
 
   useEffect(() => {
     if (status === "playing" && energy > 0) {
-      const decayBase = 0.35 + level * 0.07;
-      const speed = isSlowMo ? 0.06 : decayBase;
+      const decayBase = 0.4 + level * 0.08;
+      const speed = isSlowMo ? 0.08 : decayBase;
       timerRef.current = setInterval(() => {
-        setEnergy((e) => Math.max(0, e - speed));
+        setEnergy((e) => {
+          if (e <= 0) {
+            handleTimeout();
+            return 0;
+          }
+          return e - speed;
+        });
       }, 100);
-    }
-    if (energy === 0 && status === "playing") {
-      playSound("wrong");
-      vibrate([100, 50, 100]);
-      setIsModalOpen(true);
     }
     return () => clearInterval(timerRef.current);
   }, [status, energy, level, isSlowMo]);
 
-  const handleKey = (key) => {
-    if (status !== "playing") return;
-    vibrate(15);
-    if (key === "clear") return setUserInput("");
-    if (key === "enter") return submit();
-    if (userInput.length < 4) setUserInput((prev) => prev + key);
-  };
-
-  const submit = () => {
-    if (!userInput || status !== "playing") return;
-    const timeTaken = (Date.now() - startTimeRef.current) / 1000;
-    if (parseInt(userInput) === answer) {
-      processSuccess(timeTaken);
-    } else {
-      processFailure();
-    }
+  const handleTimeout = () => {
+    playSound("wrong");
+    vibrate([100, 50, 100]);
+    setStatus("lost");
+    setIsModalOpen(true);
   };
 
   const processSuccess = (time) => {
     playSound("correct");
     setFlash(true);
-    setTimeout(() => setFlash(false), 100);
+    setTimeout(() => setFlash(false), 150);
     vibrate(30);
+
     const newCombo = combo + 1;
     setCombo(newCombo);
-    let points = Math.floor(energy * 5) * (1 + newCombo * 0.15);
-    if (time < 1.8) points *= 1.5;
+
+    let points = Math.floor(energy * 10) * (1 + newCombo * 0.2);
+    if (time < 2) points *= 1.5;
+
     setScore((s) => s + Math.floor(points));
+    addXP(Math.floor(points / 10));
     setStatus("success");
+
     setTimeout(() => {
       setLevel((l) => l + 1);
-      nextChallenge();
-    }, 400);
+    }, 500);
   };
 
   const processFailure = () => {
     playSound("wrong");
-    vibrate([20, 60, 20]);
+    vibrate([50, 100, 50]);
     setCombo(0);
     setStatus("error");
-    setEnergy((e) => Math.max(0, e - 20));
-    setTimeout(() => setStatus("playing"), 600);
+    setEnergy((e) => Math.max(0, e - 25));
+    setTimeout(() => {
+      setStatus("playing");
+      setUserInput("");
+    }, 700);
   };
 
+  const submit = useCallback(() => {
+    if (!userInput || status !== "playing") return;
+    const isCorrect = parseInt(userInput) === answer;
+    const timeTaken = (Date.now() - startTimeRef.current) / 1000;
+    isCorrect ? processSuccess(timeTaken) : processFailure();
+  }, [userInput, answer, status, energy, combo]);
+
   useEffect(() => {
-    if (userInput.length >= 3 && status === "playing") {
-      const t = setTimeout(() => submit(), 500);
+    if (
+      answer &&
+      userInput.length >= answer.toString().length &&
+      status === "playing"
+    ) {
+      const t = setTimeout(submit, 300);
       return () => clearTimeout(t);
     }
-  }, [userInput]);
+  }, [userInput, answer, submit, status]);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center p-4 font-mono select-none overflow-x-hidden">
       <Helmet>
-        <title>Neural Grid Pro | Decode the System</title>
+        <title>Neural Grid Pro+ | MindLab AI</title>
       </Helmet>
 
-      {/* --- Flash Effect --- */}
       <AnimatePresence>
         {flash && (
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.15 }}
+            animate={{ opacity: 0.2 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-cyan-400 z-50 pointer-events-none"
+            className="fixed inset-0 bg-cyan-500 z-50 pointer-events-none"
           />
         )}
       </AnimatePresence>
 
-      {/* --- HUD --- */}
-      <div className="w-full max-w-md bg-[#0a0a0a] border border-white/5 rounded-3xl p-4 mb-6 shadow-2xl">
-        <div className="flex justify-between items-end mb-3">
+      {/* HUD Header */}
+      <div className="w-full max-w-md bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-5 mb-8 shadow-2xl">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-[8px] text-zinc-500 tracking-[0.3em]">
-              NODE_LEVEL
+            <p className="text-[7px] text-cyan-500 tracking-[0.4em] mb-1 uppercase">
+              Neural_Link_Established
             </p>
-            <p className="text-xl font-black text-cyan-400">
-              0x{level.toString(16).toUpperCase()}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-[8px] text-zinc-500 tracking-[0.3em]">COMBO</p>
-            <motion.p
-              key={combo}
-              animate={{ scale: [1, 1.2, 1] }}
-              className="text-xl font-black text-fuchsia-500"
-            >
-              {combo > 0 ? `🔥 x${combo}` : "--"}
-            </motion.p>
+            <h2 className="text-2xl font-black italic tracking-tighter">
+              {rank?.split("_")[0]}{" "}
+              <span className="text-zinc-600 text-sm">v.{globalLevel}</span>
+            </h2>
           </div>
           <div className="text-right">
-            <p className="text-[8px] text-zinc-500 tracking-[0.3em]">
-              TOTAL_XP
+            <p className="text-[7px] text-zinc-500 tracking-[0.4em] mb-1">
+              SESSION_XP
             </p>
-            <p className="text-xl font-black text-amber-500">
+            <p className="text-2xl font-black text-amber-500">
               {score.toLocaleString()}
             </p>
           </div>
         </div>
-        <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+
+        <div className="relative w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
           <motion.div
             animate={{ width: `${energy}%` }}
-            className={`h-full shadow-[0_0_10px_currentColor] ${
-              energy < 30 ? "bg-red-500" : "bg-cyan-400"
-            }`}
+            className={`h-full ${energy < 30 ? "bg-red-600" : "bg-cyan-500"}`}
+            style={{
+              boxShadow: energy < 30 ? "0 0 15px #dc2626" : "0 0 15px #06b6d4",
+            }}
           />
         </div>
       </div>
 
-      {/* --- Main Game --- */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full max-w-md">
-        <motion.div
-          key={level}
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="grid grid-cols-3 gap-3 p-4 bg-zinc-950 rounded-[2.5rem] border-2 border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-        >
-          {grid.map((row, r) =>
-            row.map((cell, c) => (
-              <div
-                key={`${r}-${c}`}
-                className={`w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl text-2xl font-black border border-white/5 bg-[#080808] ${
-                  cell === "?"
-                    ? "text-white shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-pulse"
-                    : "text-cyan-400/60"
-                }`}
+      {/* Main Grid Section */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-10 w-full max-w-md">
+        <div className="relative">
+          <AnimatePresence>
+            {combo > 1 && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="absolute -top-8 -right-8 bg-fuchsia-600 text-black px-3 py-1 rounded-full text-xs font-black rotate-12 z-10"
               >
-                {cell}
-              </div>
-            ))
-          )}
-        </motion.div>
+                {" "}
+                X{(1 + combo * 0.2).toFixed(1)} MULTIPLIER{" "}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.div
+            key={level}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="grid grid-cols-3 gap-3 p-5 bg-[#080808] rounded-[3rem] border border-white/10 shadow-2xl relative"
+          >
+            {grid.map((row, r) =>
+              row.map((cell, c) => (
+                <div
+                  key={`${r}-${c}`}
+                  className={`w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center rounded-2xl text-3xl font-black border ${
+                    cell === "?"
+                      ? "border-cyan-500 bg-cyan-500/5 text-white animate-pulse"
+                      : "border-white/5 bg-zinc-900/50 text-zinc-500"
+                  }`}
+                >
+                  {cell}
+                </div>
+              ))
+            )}
+          </motion.div>
+        </div>
 
         <div className="text-center">
-          <motion.div
-            key={userInput}
-            initial={{ y: 10 }}
-            animate={{ y: 0 }}
-            className={`text-6xl font-black tracking-tighter ${
-              status === "error" ? "text-red-500" : "text-white"
-            }`}
-          >
-            {userInput || <span className="opacity-10 font-thin">000</span>}
-          </motion.div>
-          <p className="text-[7px] tracking-[0.8em] text-zinc-600 mt-2 uppercase italic">
-            Awaiting_Manual_Input
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-zinc-800 text-4xl font-thin tracking-widest">
+              {">>"}
+            </span>
+            <motion.div
+              key={userInput}
+              initial={{ y: 5, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className={`text-7xl font-black tracking-tighter min-w-[120px] ${
+                status === "error" ? "text-red-500" : "text-white"
+              }`}
+            >
+              {" "}
+              {userInput || "---"}{" "}
+            </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* --- Keypad & Powers --- */}
-      <div className="w-full max-w-sm mt-8 space-y-4">
-        <div className="grid grid-cols-3 gap-2">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "✓"].map((k) => (
+      {/* Keypad */}
+      <div className="w-full max-w-sm mt-12 space-y-4 pb-10">
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "GO"].map((k) => (
             <button
               key={k}
-              onClick={() =>
-                k === "⌫"
-                  ? handleKey("clear")
-                  : k === "✓"
-                  ? submit()
-                  : handleKey(k)
-              }
-              className={`h-14 rounded-2xl text-xl font-black border border-white/5 active:scale-95 transition-all ${
-                k === "✓"
-                  ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
-                  : k === "⌫"
-                  ? "bg-red-500/10 text-red-500"
-                  : "bg-zinc-900/40 hover:bg-zinc-800"
+              onClick={() => {
+                vibrate(10);
+                if (k === "⌫") setUserInput("");
+                else if (k === "GO") submit();
+                else if (userInput.length < 5) setUserInput((prev) => prev + k);
+              }}
+              className={`h-16 rounded-2xl text-2xl font-black border ${
+                k === "GO"
+                  ? "bg-cyan-600 text-black border-cyan-400"
+                  : "bg-zinc-900 text-white border-white/5"
               }`}
             >
-              {k}
+              {" "}
+              {k}{" "}
             </button>
           ))}
         </div>
-        <div className="flex gap-3">
+
+        <div className="flex gap-4">
           <button
             disabled={powers.slow === 0 || isSlowMo}
             onClick={() => {
               setPowers((p) => ({ ...p, slow: p.slow - 1 }));
               setIsSlowMo(true);
+              playSound("powerup");
               setTimeout(() => setIsSlowMo(false), 5000);
             }}
-            className={`flex-1 h-12 rounded-xl border border-white/5 text-[9px] font-black tracking-widest ${
+            className={`flex-1 h-14 rounded-2xl border font-black text-[10px] ${
               isSlowMo
                 ? "bg-cyan-500 text-black animate-pulse"
-                : "bg-zinc-900/80 text-zinc-500"
+                : "bg-zinc-950 text-zinc-500"
             }`}
           >
-            🧊 TIME_DILATE [{powers.slow}]
+            {" "}
+            {isSlowMo ? "SYSTEM_DILATED" : `🧊 TIME_WARP [${powers.slow}]`}{" "}
           </button>
           <button
             disabled={powers.reveal === 0}
             onClick={() => {
               setPowers((p) => ({ ...p, reveal: p.reveal - 1 }));
-              setUserInput(answer.toString());
+              setUserInput(answer?.toString() || "");
+              playSound("powerup");
             }}
-            className="flex-1 h-12 rounded-xl border border-white/5 bg-zinc-900/80 text-zinc-500 text-[9px] font-black tracking-widest"
+            className="flex-1 h-14 rounded-2xl border bg-zinc-950 text-zinc-500 border-white/5 font-black text-[10px]"
           >
-            💡 AUTO_REVEAL [{powers.reveal}]
+            {" "}
+            💡 REVEAL_NODE [{powers.reveal}]{" "}
           </button>
         </div>
       </div>
 
       <ResultModal
         isOpen={isModalOpen}
-        status="lose"
+        status={status === "lost" ? "lose" : "win"}
         score={score}
-        onRestart={() => {
-          setCombo(0);
-          setLevel(1);
-          setScore(0);
+        onRestart={() => window.location.reload()}
+        nextLevel={() => {
           setIsModalOpen(false);
           nextChallenge();
         }}
       />
 
-      {/* --- SEO & GUIDE SECTION --- */}
-      <section className="w-full max-w-4xl mt-20 border-t border-white/5 pt-12 pb-20 px-4 font-sans">
-        <div className="grid md:grid-cols-2 gap-12">
-          {/* Arabic Version */}
-          <div dir="rtl" className="space-y-6">
-            <h2 className="text-2xl font-black text-cyan-400">
-              لغز الشبكة العصبية: تحدي فك التشفير
-            </h2>
-            <div className="space-y-4 text-zinc-400 text-sm leading-relaxed">
-              <p>
-                <strong className="text-white">ما هي اللعبة؟</strong> Neural
-                Grid هي تجربة ذهنية مصممة لرفع سرعة المعالجة المنطقية في دماغك
-                من خلال أنماط رياضية متسارعة.
-              </p>
-              <h3 className="text-white font-bold">طريقة اللعب:</h3>
-              <ul className="list-disc list-inside space-y-2">
-                <li>
-                  حل النمط الرقمي في الشبكة وأدخل الرقم المفقيد مكان{" "}
-                  <span className="text-cyan-400">?</span>.
-                </li>
-                <li>
-                  حافظ على <span className="text-fuchsia-500">Combo</span> مرتفع
-                  لمضاعفة نقاطك.
-                </li>
-                <li>
-                  استخدم <span className="text-white">Time Dilate</span> لإبطاء
-                  الوقت عند الألغاز الصعبة.
-                </li>
-              </ul>
-              <p className="text-xs italic text-zinc-500">
-                #تدريب_العقل #سرعة_البديهة #ألغاز_ذكاء
-              </p>
-            </div>
-          </div>
-
-          {/* English Version (SEO Optimized) */}
-          <div className="space-y-6">
-            <h2 className="text-2xl font-black text-cyan-400">
-              Neural Grid: Ultimate Speed Decoding Challenge
-            </h2>
-            <div className="space-y-4 text-zinc-400 text-sm leading-relaxed">
-              <p>
-                <strong className="text-white">The Concept:</strong> Neural Grid
-                is a high-octane brain training game. It challenges your brain's
-                ability to recognize mathematical patterns and decode encrypted
-                data under intense time pressure.
-              </p>
-              <h3 className="text-white font-bold">How to Play:</h3>
-              <ul className="list-disc list-inside space-y-2">
-                <li>
-                  Identify the logic in the 3x3 grid and input the missing value{" "}
-                  <span className="text-cyan-400">?</span>.
-                </li>
-                <li>
-                  Speed is key! Maintain a{" "}
-                  <span className="text-fuchsia-500">Combo Streak</span> to
-                  boost your score multiplier.
-                </li>
-                <li>
-                  Manage your <span className="text-red-500">Energy Bar</span>;
-                  every millisecond counts in the cyber world.
-                </li>
-              </ul>
-              <p className="text-xs italic text-zinc-500">
-                #BrainTraining #LogicPuzzle #CyberGame #CognitiveSkills
-              </p>
-            </div>
-          </div>
+      {/* --- FUTURISTIC SEO FOOTER --- */}
+      <footer className="w-full max-w-3xl mt-20 border-t border-white/5 pt-10 pb-16 px-6 text-center">
+        {/* Branding */}
+        <div className="mb-6">
+          <h3 className="text-cyan-400 font-black text-lg tracking-widest uppercase">
+            MindLab AI System
+          </h3>
+          <p className="text-zinc-500 text-xs mt-2">
+            Advanced Brain Training • AI-Powered Learning • Next-Gen Cognitive
+            Games
+          </p>
         </div>
-      </section>
+
+        {/* Description (SEO قوي) */}
+        <p className="text-zinc-400 text-sm leading-relaxed max-w-xl mx-auto">
+          <strong className="text-white">Neural Grid Pro+</strong> is an
+          advanced AI-powered brain training game designed to improve logical
+          thinking, pattern recognition, and problem-solving skills. Built using
+          cutting-edge{" "}
+          <span className="text-cyan-400">AI grid generation technology</span>,
+          this interactive experience challenges players with dynamic puzzles
+          that evolve in real-time.
+        </p>
+
+        {/* Features */}
+        <div className="mt-6 flex flex-wrap justify-center gap-2 text-[10px] text-zinc-500">
+          {[
+            "Brain Training Game",
+            "AI Puzzle Generator",
+            "Logic & Pattern Recognition",
+            "Cognitive Skills Development",
+            "Interactive Learning Game",
+            "Neural Challenge System",
+          ].map((tag) => (
+            <span
+              key={tag}
+              className="border border-zinc-700 px-2 py-1 rounded-md"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-8">
+          <p className="text-zinc-600 text-xs mb-2">
+            Ready to push your brain beyond limits?
+          </p>
+          <p className="text-cyan-400 font-bold text-sm">
+            Train • Improve • Dominate 🧠⚡
+          </p>
+        </div>
+
+        {/* Bottom Line */}
+        <div className="mt-10 text-[10px] text-zinc-700 tracking-widest">
+          © {new Date().getFullYear()} MindLab AI • All Rights Reserved
+        </div>
+      </footer>
     </div>
   );
 }

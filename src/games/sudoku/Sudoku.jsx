@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { generateSudoku } from "./sudokuEngine";
-import { useGameStore } from "@/core/store";
-import { playSound } from "@/core/sounds";
-import ResultModal from "@/components/shared/ResultModal";
+import { useGameStore } from "../../core/store";
+import { playSound } from "../../core/sounds";
 
 export default function Sudoku() {
   const navigate = useNavigate();
+  const { addXP, rank, level } = useGameStore();
 
   // --- States ---
   const [difficulty, setDifficulty] = useState("medium");
@@ -19,209 +19,323 @@ export default function Sudoku() {
   const [time, setTime] = useState(0);
   const [lives, setLives] = useState(3);
   const [win, setWin] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCell, setSelectedCell] = useState(null); // {row, col}
-
-  const addXP = useGameStore((state) => state.addXP);
+  const [selectedCell, setSelectedCell] = useState(null);
+  const [errorCell, setErrorCell] = useState(null);
 
   // --- Timer ---
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!win && lives > 0) setTime((t) => t + 1);
-    }, 1000);
+    let interval;
+    if (!win && lives > 0) {
+      interval = setInterval(() => setTime((t) => t + 1), 1000);
+    }
     return () => clearInterval(interval);
   }, [win, lives]);
 
-  // --- Handlers ---
-  const handleNewGame = (diff = difficulty) => {
-    const newGame = generateSudoku(diff);
-    setGame(newGame);
-    setGrid(newGame.puzzle);
-    setInitialGrid(newGame.puzzle);
-    setDifficulty(diff);
-    setTime(0);
-    setLives(3);
-    setWin(false);
-    setIsModalOpen(false);
-    setSelectedCell(null);
-  };
-
-  const handleChange = (row, col, value) => {
-    if (initialGrid[row][col] !== "" || win || lives <= 0) return;
-    const newGrid = grid.map((r) => [...r]);
-    newGrid[row][col] = value === "" ? "" : Number(value);
-
-    if (value !== "") {
-      if (Number(value) !== game.solution[row][col]) {
-        setLives((l) => l - 1);
-        playSound("wrong");
-        if (lives <= 1) setIsModalOpen(true);
-      } else {
-        playSound("correct");
-        checkWin(newGrid);
-      }
+  // --- Core Handlers ---
+  const handleCellClick = (row, col) => {
+    if (initialGrid[row][col] === "" && !win && lives > 0) {
+      setSelectedCell({ row, col });
     }
-    setGrid(newGrid);
   };
 
   const handleNumberInput = (num) => {
-    if (!selectedCell) return;
+    if (!selectedCell || win || lives <= 0) return;
     const { row, col } = selectedCell;
-    handleChange(row, col, num === "erase" ? "" : num);
+
+    if (num === game.solution[row][col]) {
+      // ✅ Correct Input - Trigger Sound
+      playSound("correct");
+      const newGrid = grid.map((r) => [...r]);
+      newGrid[row][col] = num;
+      setGrid(newGrid);
+      checkWin(newGrid);
+    } else {
+      // ❌ Error Input - Trigger Sound & Penalty
+      playSound("wrong");
+      setLives((l) => l - 1);
+      setErrorCell({ row, col });
+      setTimeout(() => setErrorCell(null), 500);
+    }
   };
 
   const checkWin = (currentGrid) => {
     const isComplete = currentGrid.every((row, i) =>
       row.every((cell, j) => cell !== "" && cell === game.solution[i][j])
     );
+
     if (isComplete) {
       setWin(true);
-      playSound("win");
-      addXP(100 + (difficulty === "hard" ? 100 : 50));
-      setIsModalOpen(true);
+      playSound("win"); // 🏆 Win Sound
+
+      // Calculate Professional XP
+      const baseXP = 50;
+      const difficultyMulti =
+        difficulty === "hard" ? 2 : difficulty === "medium" ? 1.5 : 1;
+      const accuracyBonus = lives * 10;
+      const totalXP = Math.floor(baseXP * difficultyMulti + accuracyBonus);
+
+      addXP(totalXP);
     }
   };
 
+  const resetGame = (newDiff = difficulty) => {
+    const newGame = generateSudoku(newDiff);
+    setGame(newGame);
+    setGrid(newGame.puzzle);
+    setInitialGrid(newGame.puzzle);
+    setDifficulty(newDiff);
+    setTime(0);
+    setLives(3);
+    setWin(false);
+    setSelectedCell(null);
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 pt-12 font-sans">
-      {/* 🟢 العدادات العلوية */}
-      <div className="mb-8 flex gap-8 text-white bg-[#111111]/90 backdrop-blur-xl px-8 py-4 rounded-[2rem] border border-[#00d2ff]/20 shadow-2xl">
-        <div className="text-center px-4">
-          <p className="text-[10px] text-zinc-400 uppercase tracking-[0.2em] mb-1">
-            Timer
-          </p>
-          <p className="text-2xl font-black text-cyan-400">
-            {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, "0")}
-          </p>
-        </div>
-        <div className="w-[1px] bg-white/10 my-2" />
-        <div className="text-center px-4">
-          <p className="text-[10px] text-zinc-400 uppercase tracking-[0.2em] mb-1">
-            Stability
-          </p>
-          <p className="text-2xl tracking-[2px]">{"❤️".repeat(lives)}</p>
-        </div>
-      </div>
-
-      {/* 🟢 شبكة السودوكو + لوحة الأرقام */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* 🔹 شبكة السودوكو */}
-        <div className="grid grid-cols-9 grid-rows-9 gap-0 bg-[#121212] p-2 rounded-3xl shadow-[0_0_60px_rgba(0,210,255,0.4)] border-[8px] border-[#00d2ff]/30">
-          {grid.map((row, i) =>
-            row.map((cell, j) => {
-              const isInitial = initialGrid[i][j] !== "";
-              const isSelected =
-                selectedCell?.row === i && selectedCell?.col === j;
-
-              const borderTop =
-                i % 3 === 0
-                  ? "border-t-4 border-t-[#00d2ff]/50"
-                  : "border-t border-t-[#00d2ff]/20";
-              const borderLeft =
-                j % 3 === 0
-                  ? "border-l-4 border-l-[#00d2ff]/50"
-                  : "border-l border-l-[#00d2ff]/20";
-              const borderRight =
-                (j + 1) % 3 === 0
-                  ? "border-r-4 border-r-[#00d2ff]/50"
-                  : "border-r border-r-[#00d2ff]/20";
-              const borderBottom =
-                (i + 1) % 3 === 0
-                  ? "border-b-4 border-b-[#00d2ff]/50"
-                  : "border-b border-b-[#00d2ff]/20";
-
-              return (
-                <div
-                  key={`${i}-${j}`}
-                  onClick={() =>
-                    !isInitial && setSelectedCell({ row: i, col: j })
-                  }
-                  className={`
-                    w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center text-xl sm:text-2xl font-black cursor-pointer transition-all duration-75
-                    ${borderTop} ${borderLeft} ${borderRight} ${borderBottom}
-                    ${
-                      isInitial
-                        ? "bg-[#1f1f1f] text-white"
-                        : "bg-[#0f0f0f] text-cyan-400"
-                    }
-                    ${
-                      isSelected
-                        ? "bg-cyan-500/20 ring-2 ring-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)] z-10 scale-105"
-                        : ""
-                    }
-                    ${!isInitial && !isSelected ? "hover:bg-[#1a1a1a]/70" : ""}
-                  `}
-                >
-                  {cell}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* 🔹 لوحة الأرقام والشرح */}
-        <div className="flex flex-col gap-6 bg-[#111111]/80 p-6 rounded-[2.5rem] border border-[#00d2ff]/20 backdrop-blur-sm">
-          <div className="grid grid-cols-3 gap-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-              <motion.button
-                key={num}
-                whileHover={{ scale: 1.05, backgroundColor: "#0f0f0f" }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleNumberInput(num)}
-                className="w-14 h-14 sm:w-16 sm:h-16 bg-[#121212] border border-[#00d2ff]/30 rounded-2xl text-2xl font-black text-cyan-400 shadow-xl flex items-center justify-center hover:border-cyan-400 transition-all active:bg-cyan-600"
-              >
-                {num}
-              </motion.button>
-            ))}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleNumberInput("erase")}
-              className="col-span-3 h-14 bg-red-600/20 border border-red-500/40 rounded-2xl text-red-400 font-bold hover:bg-red-500 hover:text-white transition-all shadow-lg flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
-            >
-              Clear ⌫
-            </motion.button>
+    <div className="min-h-screen bg-[#050505] text-white p-4 pt-24 font-mono selection:bg-cyan-500/30">
+      <div className="max-w-5xl mx-auto">
+        {/* --- Global Status Header --- */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap justify-between items-center mb-8 bg-[#0c0c0c] p-6 rounded-3xl border border-white/5 gap-4 shadow-xl"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-2xl border border-cyan-500/20">
+              🧩
+            </div>
+            <div>
+              <p className="text-[10px] text-cyan-500 tracking-[0.3em] uppercase">
+                Sector: Sudoku_Lab
+              </p>
+              <h2 className="text-xl font-black">
+                {rank.replace("_", " ")}{" "}
+                <span className="text-zinc-600 text-xs tracking-normal">
+                  LVL {level}
+                </span>
+              </h2>
+            </div>
           </div>
-
-          {/* التحكم في الصعوبة */}
-          <div className="flex flex-col gap-3 border-t border-[#00d2ff]/20 pt-6">
-            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest text-center">
-              Complexity Level
+          <div className="text-center">
+            <p className="text-[10px] text-zinc-500 uppercase mb-1 tracking-widest">
+              Process Time
             </p>
-            <div className="flex gap-2">
-              {["easy", "medium", "hard"].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => handleNewGame(d)}
-                  className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${
-                    difficulty === d
-                      ? "bg-cyan-500 text-black"
-                      : "bg-[#121212] text-zinc-400 hover:text-cyan-400"
-                  }`}
+            <p className="text-3xl font-black text-cyan-400 tabular-nums">
+              {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, "0")}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-red-500 uppercase mb-1 tracking-widest font-bold">
+              Neural Integrity
+            </p>
+            <div className="flex gap-2 justify-end">
+              {[...Array(3)].map((_, i) => (
+                <motion.span
+                  key={i}
+                  animate={{
+                    scale: i < lives ? 1 : 0.8,
+                    opacity: i < lives ? 1 : 0.2,
+                  }}
+                  className="text-2xl text-red-500"
                 >
-                  {d}
-                </button>
+                  ⚡
+                </motion.span>
               ))}
             </div>
           </div>
+        </motion.div>
 
-          {/* شرح أسفل لوحة الأرقام */}
-          <p className="text-[10px] text-zinc-400 mt-4 text-center">
-            Select a number and click on a cell to fill it. Use "Clear" to erase
-            a cell. Complete all cells to win!
-          </p>
+        {/* --- Primary Interaction Zone --- */}
+        <div className="flex flex-col lg:flex-row gap-12 items-center justify-center mb-20">
+          {/* Professional Sudoku Grid */}
+          <div className="relative p-2 bg-[#0c0c0c] rounded-[2rem] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,1)]">
+            <div className="grid grid-cols-9 border-4 border-zinc-800 rounded-xl overflow-hidden shadow-2xl">
+              {grid.map((row, i) =>
+                row.map((cell, j) => (
+                  <div
+                    key={`${i}-${j}`}
+                    onClick={() => handleCellClick(i, j)}
+                    className={`
+                      w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center text-xl font-bold transition-all cursor-pointer relative
+                      ${
+                        i % 3 === 2 && i !== 8
+                          ? "border-b-4 border-zinc-800"
+                          : "border-b border-white/5"
+                      }
+                      ${
+                        j % 3 === 2 && j !== 8
+                          ? "border-r-4 border-zinc-800"
+                          : "border-r border-white/5"
+                      }
+                      ${
+                        initialGrid[i][j] !== ""
+                          ? "text-zinc-600 bg-zinc-900/40"
+                          : "text-cyan-400 bg-black"
+                      }
+                      ${
+                        selectedCell?.row === i && selectedCell?.col === j
+                          ? "bg-cyan-500/20 text-white z-10"
+                          : ""
+                      }
+                      ${
+                        errorCell?.row === i && errorCell?.col === j
+                          ? "bg-red-900/60 text-white animate-pulse"
+                          : ""
+                      }
+                    `}
+                  >
+                    {cell}
+                    {selectedCell?.row === i && selectedCell?.col === j && (
+                      <motion.div
+                        layoutId="glow"
+                        className="absolute inset-0 border-2 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)] z-20 pointer-events-none"
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Neural Input Interface */}
+          <div className="w-full max-w-[320px]">
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                <motion.button
+                  whileHover={{ scale: 1.05, backgroundColor: "#111" }}
+                  whileTap={{ scale: 0.95 }}
+                  key={n}
+                  onClick={() => handleNumberInput(n)}
+                  className="h-16 bg-[#0c0c0c] border border-white/10 rounded-2xl font-black text-2xl hover:border-cyan-500/50 hover:text-cyan-400 transition-all shadow-lg"
+                >
+                  {n}
+                </motion.button>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {["easy", "medium", "hard"].map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => resetGame(d)}
+                    className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg border transition-all ${
+                      difficulty === d
+                        ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                        : "border-white/5 text-zinc-600 hover:text-white"
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => navigate("/")}
+                className="w-full py-4 text-[10px] tracking-[0.3em] text-zinc-600 border border-white/5 rounded-2xl hover:bg-red-950/20 hover:text-red-500 hover:border-red-500/30 transition-all uppercase font-bold"
+              >
+                Abort Connection
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* مودال النتائج */}
-      <ResultModal
-        isOpen={isModalOpen}
-        status={win ? "win" : "lose"}
-        score={win ? (difficulty === "hard" ? 500 : 200) : 0}
-        time={`${Math.floor(time / 60)}m`}
-        onRestart={() => handleNewGame()}
-        nextLevel={() => navigate("/")}
-      />
+        {/* --- Professional SEO Footer --- */}
+        <footer className="mt-24 border-t border-white/5 pt-16 pb-20 font-sans">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 text-zinc-400">
+            <div>
+              <h2 className="text-2xl font-black text-white mb-6 tracking-tight">
+                The Ultimate AI Sudoku Experience
+              </h2>
+              <p className="leading-relaxed mb-6 text-lg">
+                Welcome to{" "}
+                <span className="text-cyan-500 font-bold">MindLab AI</span>,
+                where logic meets the future. Our Sudoku Master module is more
+                than just a puzzle—it is a specialized cognitive training
+                environment.
+              </p>
+              <p className="leading-relaxed mb-6">
+                Powered by a **procedural grid generator**, our engine creates
+                billions of unique mathematical combinations. Playing Sudoku
+                regularly is scientifically proven to improve neuroplasticity
+                and short-term memory.
+              </p>
+            </div>
+
+            <div className="bg-[#0c0c0c] p-8 rounded-[2.5rem] border border-white/5 relative">
+              <h3 className="text-cyan-500 font-bold uppercase tracking-widest text-sm mb-6">
+                Module Features
+              </h3>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-4">
+                  <span className="text-cyan-500 font-bold">01.</span>
+                  <div>
+                    <p className="text-white font-bold text-sm">
+                      Global Progression Sync
+                    </p>
+                    <p className="text-xs mt-1 leading-relaxed">
+                      Earn XP across all MindLab modules. Your performance here
+                      directly affects your Global Rank.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-cyan-500 font-bold">02.</span>
+                  <div>
+                    <p className="text-white font-bold text-sm">
+                      Neural Integrity System
+                    </p>
+                    <p className="text-xs mt-1 leading-relaxed">
+                      Three lives per session. High accuracy is rewarded with
+                      massive XP multipliers.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-cyan-500 font-bold">03.</span>
+                  <div>
+                    <p className="text-white font-bold text-sm">
+                      Dynamic AI Difficulty
+                    </p>
+                    <p className="text-xs mt-1 leading-relaxed">
+                      From Initiate to MindLab Master, grids adapt to your
+                      cognitive threshold.
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </footer>
+
+        {/* Success Overlay */}
+        <AnimatePresence>
+          {win && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-center"
+              >
+                <h2 className="text-8xl font-black text-cyan-500 mb-4 tracking-tighter drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]">
+                  SUCCESS
+                </h2>
+                <p className="text-zinc-500 tracking-[1em] mb-12 uppercase text-sm font-bold">
+                  Neural Data Synchronized
+                </p>
+                <button
+                  onClick={() => navigate("/")}
+                  className="px-16 py-5 bg-cyan-600 text-black font-black rounded-full hover:bg-cyan-400 transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(6,182,212,0.4)]"
+                >
+                  RETURN TO DASHBOARD
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

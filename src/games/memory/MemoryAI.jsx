@@ -352,6 +352,122 @@ function ShopView({ score, setScore, setPowers, close }) {
       >
         Back to Mission
       </button>
+      {/* --- ULTIMATE MEMORY AI FOOTER --- */}
+      <footer className="w-full max-w-5xl mt-24 border-t border-white/5 pt-12 pb-20 px-6 text-center font-mono relative overflow-hidden">
+        {/* Animated Neural Glow */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div
+            className={`w-full h-full bg-gradient-to-r ${currentTheme.color.replace(
+              "text",
+              "from"
+            )} to-transparent blur-3xl animate-pulse`}
+          />
+        </div>
+
+        {/* SYSTEM TITLE */}
+        <div className="relative z-10 mb-6">
+          <h3
+            className={`text-xl font-black tracking-[0.5em] uppercase ${currentTheme.color}`}
+          >
+            MEMORY CORE SYSTEM
+          </h3>
+          <p className="text-zinc-600 text-[10px] mt-2 tracking-widest">
+            AI MEMORY TRAINING • PATTERN RECOGNITION • NEURAL BOOST
+          </p>
+        </div>
+
+        {/* LIVE STATS */}
+        <div className="relative z-10 grid grid-cols-3 gap-6 mb-10 text-[11px]">
+          <Stat label="ENERGY" value={`${Math.floor(energy)}%`} />
+          <Stat label="XP" value={score.toLocaleString()} />
+          <Stat label="LEVEL" value={`L-${level}`} />
+        </div>
+
+        {/* DESCRIPTION */}
+        <p className="relative z-10 text-zinc-400 text-sm leading-relaxed max-w-2xl mx-auto">
+          <strong className="text-white">Memory AI</strong> is an advanced
+          <span className="text-cyan-400"> brain training game </span>
+          designed to enhance memory retention, pattern recognition, and
+          cognitive speed. Match neural nodes, unlock higher stages, and upgrade
+          your abilities in real-time.
+        </p>
+
+        {/* POWERS STATUS */}
+        <div className="relative z-10 mt-10 flex justify-center gap-6 text-xs">
+          <div className="flex items-center gap-2 text-cyan-400">
+            🧊 Freeze: {powers.freeze}
+          </div>
+          <div className="flex items-center gap-2 text-purple-400">
+            📡 Scan: {powers.scan}
+          </div>
+        </div>
+
+        {/* CTA BUTTONS */}
+        <div className="relative z-10 mt-10 flex flex-wrap justify-center gap-4">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              playSound("powerup");
+            }}
+            className="px-5 py-2 rounded-xl bg-cyan-500 text-black text-xs font-black hover:scale-105 transition"
+          >
+            🔗 SHARE GAME
+          </button>
+
+          <button
+            onClick={() => setIsShopOpen(true)}
+            className="px-5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black hover:bg-amber-500/20"
+          >
+            🛒 OPEN SHOP
+          </button>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2 rounded-xl bg-zinc-900 border border-white/5 text-zinc-400 text-xs font-black hover:text-white"
+          >
+            🔄 RESTART
+          </button>
+        </div>
+
+        {/* SYSTEM STATUS */}
+        <div className="relative z-10 mt-10">
+          <p className="text-zinc-600 text-[10px] tracking-widest mb-2">
+            CORE STATUS
+          </p>
+          <p
+            className={`text-sm font-black ${
+              energy < 30 ? "text-red-500 animate-pulse" : currentTheme.color
+            }`}
+          >
+            {energy < 30 ? "⚠ LOW ENERGY" : "✔ MEMORY SYSTEM STABLE"}
+          </p>
+        </div>
+
+        {/* SEO TAGS */}
+        <div className="relative z-10 mt-10 flex flex-wrap justify-center gap-2 text-[9px] text-zinc-500 opacity-40">
+          {[
+            "Memory Game AI",
+            "Brain Training Game",
+            "Match Pairs Game",
+            "Cognitive Skills Game",
+            "Pattern Recognition",
+            "Educational Game for Kids",
+            "Neural Memory Training",
+          ].map((tag) => (
+            <span
+              key={tag}
+              className="border border-zinc-700 px-2 py-1 rounded-md"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+
+        {/* COPYRIGHT */}
+        <div className="relative z-10 mt-12 text-[10px] text-zinc-700 tracking-[0.4em]">
+          © {new Date().getFullYear()} MINDLAB AI • MEMORY DIVISION
+        </div>
+      </footer>
     </div>
   );
 }

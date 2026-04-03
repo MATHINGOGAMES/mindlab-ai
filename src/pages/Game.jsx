@@ -6,6 +6,8 @@ import GeometryMemory from "../games/geometry/GeometryMemory"; // 👈 Import th
 import NeonMathAdvancedPro from "../games/NeonMathAdvancedPro/NeonMathAdvancedPro";
 import { motion } from "framer-motion";
 import WordCatcher from "../games/WordCatcher/WordCatcher";
+import SentenceArchitect from "../games/SentenceArchitect/SentenceArchitect";
+import BioLogicChain from "../games/BioLogicChain/BioLogicChain";
 export default function Game() {
   const { type } = useParams();
 
@@ -17,6 +19,8 @@ export default function Game() {
     geometry: <GeometryMemory />, // 👈 Link the new isolated Geometry module
     NeonMathAdvancedPro: <NeonMathAdvancedPro />,
     WordCatcher: <WordCatcher />,
+    SentenceArchitect: <SentenceArchitect />,
+    BioLogicChain: <BioLogicChain />,
   };
 
   const currentGame = gamesMap[type];

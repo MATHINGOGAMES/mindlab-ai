@@ -7,13 +7,10 @@ export default defineConfig(({ command, mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        // 🚀 الآن يمكنك استخدام @ للإشارة لمجلد src من أي مكان
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    base:
-      process.env.NODE_ENV === "production" && !process.env.VERCEL
-        ? "/mindlab-ai/"
-        : "/",
+    // ✅ غير هذا السطر ليصبح هكذا:
+    base: "./",
   };
 });
