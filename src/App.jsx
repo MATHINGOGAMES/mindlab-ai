@@ -13,7 +13,7 @@ import Game from "./pages/Game";
 import Home from "./pages/Home"; // اختياري إذا أردت الاحتفاظ بها بمسار مختلف
 
 function App() {
-  console.log("HELLO TEST");
+  console.log("<h1>MindLab Updated 🚀</h1>");
   const base = window.location.hostname.includes("github.io")
     ? "/mindlab-ai"
     : "/";
